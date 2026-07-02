@@ -1,0 +1,6 @@
+l=200
+b=100
+t=5
+step=40
+maxh=1
+order=3

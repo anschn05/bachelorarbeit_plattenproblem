@@ -1,0 +1,25 @@
+Bachelorarbeit - KIRCHHOFF-LOVE
+
+
+QUELLEN:
+- femscript: S. 40	(minimieren der Energie)
+
+
+Wichtig:
+	S. 4: HHJ requires omega to be convex and the 'simple situation of a purely clamped boundary'
+	
+
+
+TODO schauen das variablen einheitlich benannt werden
+TODO
+ToFormulate (hilfe mama!)
+ToFaktenCheck
+
+
+
+Nochmal überarbeiten:
+gleichung 4.2.2 (F,v) = (divDiv M,v) = ...		da passt noch was nicht!
+welche Skalarprodukte		eckig mit raum - normale multiplikation, rund über rand(raum) - normale multiplikation über rand, eckig ohne etwas - irgendwo definiert
+2.3 herleitung des plattenmodells: kursiver Teil: ich behaupte, dass die starke form mit klassischen methoden lösbar ist, weiß das aber egl gar nicht -> FaktenCheck!!!
+lax milgram die letzen 3 ungleichungen löschen?
+
