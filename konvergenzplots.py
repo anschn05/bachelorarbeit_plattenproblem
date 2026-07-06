@@ -76,7 +76,7 @@ plt.gca().invert_xaxis()
 
 plt.xlabel("Gitterweite h [mm]")
 plt.ylabel(r"max. Fehler $\sigma$")
-plt.title("Maximaler des Momententensors")
+plt.title("Maximaler Fehler des Momententensors")
 plt.legend()
 
 plt.show()
