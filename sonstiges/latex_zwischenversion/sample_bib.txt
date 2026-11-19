@@ -1,0 +1,108 @@
+
+
+%[BSc18]
+@misc{JKU_Paper,
+    author = "Katharina Rafetseder",
+    title = "A New Approach to Mixed Methods for Kirchhoff-Love Plates and Shells",
+    note = "Springer Science+Business Media, LLC",
+    year = {2018},
+    howpublished = {Dissertation},
+    url = "https://epub.jku.at/obvulihs/download/pdf/2716337"
+}
+
+%[Gur00]
+@misc{hookschesGesetz,
+    author = "Teodor Atanackovic and Ardeshir Guran",
+    title = "Theory of Elasticity for
+Scientists and Engineers",
+    note = "Springer Science+Business Media, LLC",
+    year = {2000},
+    %howpublished = {Skript, PDF},
+    url = "https://profemauriciolorey.wordpress.com/wp-content/uploads/2019/07/atanackovicguran-theoryofelasticityforscientists.pdf"
+}
+
+%[I H11]
+@misc{43,
+    author = "Isaac Harari and Igor Sokolov and Slava Krylov",
+    title = "Consistent loading for thin plates",
+    note = "Journal
+of Mechanics of Materials and Structures",
+    year = {2011},
+    %howpublished = {Skript, PDF},
+    url = "https://msp.org/jomms/2011/6-5/jomms-v6-n5-p05-s.pdf"
+}
+%[Jün01]
+@misc{PDE-Skript,
+    author = "Ansgar Jüngel",
+    title = "Partielle Differentialgleichungen",
+    note = "Vorlesungsskript",
+    year = {2023},
+    howpublished = {Skript, PDF},
+    url = "https://www.tuwien.at/index.php?eID=dumpFile&t=f&f=188928&token=d67621b4438589a3ab582c7fac4b758d7891045b"
+}
+@misc{Brezzi_Paper,
+    author = "Daniele Boffi and Franco Brezzi and Michel Fortin",
+    title = "Mixed Finite Element Methods and Application",
+    note = "Berlin: Springer",
+    year = {2013},
+    url = "https://www.karlin.mff.cuni.cz/~knobloch/FILES/Boffi-Brezzi-Fortin-Mixed_FEMs_and_Applications.pdf"
+}
+@misc{NumPDE,
+    author = "Markus Faustmann and Joachim Schoeberl",
+    title = "Mixed Finite Element Methods and Application",
+    note = "Institute of Analysis und Scientific Computing
+TU Wien",
+    year = {2013},
+}
+@misc{NumPDE_dirk,
+    author = "Michael Feischl and Dirk Praetorius",
+    title = "Numerics of Partial Differential Equations: Stationary Problems",
+    year = {2020},
+    url = "https://www.tuwien.at/index.php?eID=dumpFile&t=f&f=190957&token=ce869b937c6e9e332ab76ee549add8bbcc76800e"
+}
+@misc{numodes_nannen,
+  author       = {Michael Innerberger and Jens Melenk and Lothar Nannen and D. Praetorius and A. Rieder},
+  title        = {Numerics of differential equations},
+  year         = {2025},
+  howpublished = {Skript, PDF},
+}
+@online{IPH,
+    author = "Malte Stonis",
+    title = "Finite Elemente Methode kompakt erklärt",
+    url  = "https://www.iph-hannover.de/de/dienstleistungen/fertigungsverfahren/fem-simulation-cad-prozesskettenbetrachtung/fem/",
+    addendum = "(accessed: 08.02.2026)",
+    keywords = "IPH"
+}
+@online{NGSolve,
+    author = "Joachim Schöberl",
+    title = "ngsolve",
+    url  = "https://github.com/NGSolve/ngsolve",
+    addendum = "(accessed: 19.02.2026)",
+    keywords = "NGSolve"
+}
+@online{NGSolve_fem,
+    author = "Joachim Schöberl",
+    title = "Solving the Poisson Equation",
+    url  = "https://github.com/NGSolve/ngsolve",
+    addendum = "(accessed: 19.02.2026)",
+    keywords = "NGSolve_fem"
+}
+@misc{femscript,
+    author = "Ansgar Jüngel",
+    title = "Das kleine Finite-Elemente-Skript",
+    year = {2001},
+    howpublished = {Skript, PDF},
+    url = "https://www.tuwien.at/index.php?eID=dumpFile&t=f&f=188856&token=858e472985ae8b68f353c303310259da177d0de6"
+}
+@misc{NavierStokes_Seminararbeit,
+    author = "Anna Sonnleitner and Emanuel Steininger and Martin Strobl",
+    title = "Simulation der Navier-Stokes-Gleichungen mit Hilfe von künstlicher Intelligenz",
+    year = {2026},
+}
+@misc{fanaSkript,
+    author = "Harald Woracek and Michael Kaltenbäck and Martin Blümlinger",
+    title = "Funktionalanalysis",
+    year = {2025},
+    url = "https://www.tuwien.at/index.php?eID=dumpFile&t=f&f=243264&token=565178ac561b61982b4d58e66cdea020d0abc05c"
+}
+

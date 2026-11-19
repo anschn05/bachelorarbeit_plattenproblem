@@ -1,0 +1,1684 @@
+\documentclass{report}
+\usepackage[a4paper,margin=3.5cm]{geometry}
+\usepackage{graphicx} 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{stmaryrd}   %braucht man für Doppelklammer |[f]| (sprunstellen an Eckpunkten)
+\usepackage{mathtools}
+\usepackage{comment}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{listings}
+\usepackage{changepage}
+\usepackage{setspace}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning, intersections}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+
+%\addbibresource{sample.bib}
+\usepackage[backend=biber,style=numeric,sorting=nyt]{biblatex}
+\usepackage{xurl}
+
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4
+}
+
+\renewcommand{\figurename}{Abbildung}
+%wird für Literaturverzeichnis gebraucht:
+\usepackage[
+backend=biber,
+style=alphabetic,
+sorting=ynt
+]{biblatex}
+\addbibresource{sample.bib}
+
+\title{Kirchhoff-Love}
+\author{Anna Sonnleitner}
+\date{\today}
+
+\newcommand{\divergenz}{\operatorname{div}}
+\newcommand{\Div}{\operatorname{Div}}
+\newcommand{\CDach}{\hat{\mathcal{C}}}
+\newcommand{\Hzwei}{H^2(\Omega)}
+\newcommand{\Lzwei}{L^2(\Omega)}
+\newcommand{\lfett}{\mathbf{L}}
+\newcommand{\afett}{\mathbf{A}}
+\newcommand{\mfett}{\mathbf{M}}
+\newcommand{\vfett}{\mathbf{V}}
+\newcommand{\hdivDiv}{\mathbf{H}(\divergenz\Div, \Omega;Q^*)_{sym}}
+\newcommand{\nfett}{\mathbf{n}}
+\newcommand{\Tau}{\mathcal{T}}
+\newcommand{\bfett}{\mathbf{B}}
+\newcommand{\sfett}{\boldsymbol{\sigma}}
+\newcommand{\tfett}{\boldsymbol{\tau}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\numberwithin{equation}{section}
+
+%\theoremstyle{remark}
+\newtheorem{remark}{Bemerkung}[section]
+
+%\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\begin{document}
+
+\begin{titlepage}
+    \thispagestyle{empty}
+
+    \includegraphics[width=0.25\textwidth]{tu-wien_logo}
+    \vspace{3cm}
+
+    \begin{center}
+        {\LARGE\bfseries
+        Das Lösen der Kirchhoff-Love-Plattengleichung mit der Hellan-Hermann-Johnson-Methode über eine gemischte Variationsformulierung 
+        \par}
+
+        \vspace{1.5cm}
+
+        {\large
+        Bachelorarbeit
+        \par}
+    \end{center}
+
+    \vfill
+
+    \begin{center}
+        \begin{tabular}{rl}
+            \textbf{Autoren:} & Anna Sonnleitner \\
+            \textbf{Studium:} & Technische Mathematik \\
+            \textbf{Betreuer:} & Univ.Prof.in Elisa Davoli \\
+            \textbf{Institut:} & Institute of Analysis and Scientific Computing \\
+            \textbf{Datum:} & \today
+        \end{tabular}
+    \end{center}
+
+\end{titlepage}
+\newpage
+
+\tableofcontents
+\newpage
+
+\chapter{Kapitel 1}
+\section{Einleitung}
+Partielle Differentialgleichungen (PDEs) werden verwendet, um Vorgänge in der Naturwissenschaft, Technik oder anderen Bereichen mathematisch zu beschreiben. Ein wichtiges Merkmal einer PDE ist ihre Ordnung, welche sich durch die Ordnung der höchsten Ableitung definiert, die in der Gleichung vorkommt.
+
+Eine allgemeine lineare elliptische PDE zweiter Ordnung ist von folgender Struktur:
+\[-\divergenz(C(x)\nabla u(x)) + b(x)\nabla u(x) + c(x) = f \text{ auf } \Omega\]
+\[u = g \text{ auf } \partial\Omega,\]
+(die Definitionen der verschiedenen Operatoren können im Kapitel \ref{Notationen} nachgelesen werden). Unter der Voraussetzung, dass passende Randbedingungen existieren und das Problem wohldefiniert und wohlgestellt\footnote{"wohlgestellt" = für eine PDE existiert eine eindeutige Lösung, wobei diese Lösung stetig von den Anfangs- und Randdaten abhängt} ist, sind solche PDEs mit mehr oder weniger einfachen Methoden lösbar.
+
+In dieser Arbeit betrachten wir eine PDE vierter Ordnung von der Form:
+\begin{equation}
+    \begin{split}
+        \divergenz \Div (C(x)\nabla^2u(x)) = f\text{ auf } \Omega \\
+        u = 0 \text{ auf } \partial\Omega,
+    \end{split}
+\end{equation}
+Für derartige PDEs sind wesentlich schwieriger Lösungen zu finden. Der Kern der Lösungsmethode besteht darin, die PDE zu einem System an partiellen Differentialgleichungen erster Ordnung umzuformen. Dieses System kann mit einer ähnlichen Methode, wie der für die PDE zweiter Ordnung verwendeten Methode, numerisch gelöst werden. Dies wird im nun Folgenden kurz vorgestellt und anschließend, anhand einer eigenen Berechnung, gezeigt.
+
+\section{Motivation}
+Die in dieser Arbeit hergeleitete Lösungsmethode für die Kirchhoff-Love Plattengleichung, soll es ermöglichen, den Einfluss der Gravitation auf einer Glasplatte zu berechnen.
+Mit der berechneten Verbiegung der Glasplatte durch Gravitation, will man in der Praxis, die Verbiegung von horizontal transportierten Glasplatten messen, und mithilfe der PDE die Verbiegung der Glasplatte im vertikalen Zustand berechnen. Mit diesem System könnte die Qualitätssicherung in der Glasindustrie wesentlich vereinfacht werden.
+
+
+\newpage
+\section{Notationen}\label{Notationen}
+Wir wollen in der gesamten Arbeit annehmen, dass die Mittelfläche unserer Glasplatte $\Omega$ einen Lipschitz-Rand $\Gamma$ hat. Den normierten äußeren Normalvektor bezeichnen wir mit $\mathbf{n}=(n_\alpha)$ und den normierten, entgegen den Uhrzeigersinn gerichteten Tangentialvektor, mit $\mathbf{t}=(t_\alpha)$, woraus folgt, dass $t_1=-n_2$ und $t_2=n_1$. \\
+Für $\mathbf{a}=(a_\alpha)$ und $\afett\in\mathbb{R}^{2\times 2}$ sei
+\[a_n := \mathbf{a\cdot n}, \quad a_t := \mathbf{a\cdot t},\]
+und
+\[A_{nn} := \mathbf{An\cdot n}, \quad A_{nt} := \mathbf{An\cdot t}\]
+
+Bei Vektoren $\mathbf{a,b \in \mathbb{R}^2}$ und $\mathbf{c,d \in \mathbb{R}^3}$ führen wir für das euklidische Skalarprodukt $\mathbf{v\cdot u} = \sum_{i=1}^n v_i u_i$ folgende Schreibweisen ein
+\[\mathbf{a\cdot b} := a_\alpha b_\alpha, \qquad \mathbf{c\cdot d} := c_i d_i,\]
+bei Matrizen $\mathbf{A,B} \in \mathbb{R}^{2\times 2}$ und $\mathbf{C,D} \in \mathbb{R}^{3\times 3}$ für das Frobenius-Skalarprodukt $\mathbf{A:B}=\sum_{i,j=1}^{m,n}A_{ij}B_{ij}$
+\[
+\mathbf{A:B}:=A_{\alpha\beta}B_{\alpha\beta}, \qquad \mathbf{C:D}:=C_{ij}D_{ij}
+\]
+Für $v \in \mathbb{R}_n$ sei $\partial_v$ die Ableitung in Richtung $v$.\\
+Für $v:\Omega \rightarrow \mathbb{R}$, $\psi:\Omega\rightarrow \mathbb{R}^2$ und $\lfett:\Omega \rightarrow \mathbb{R}^{2\times 2}$, wobei wir alle als hinreichend glatt annehmen und wir folgende Schreibweise verwenden $\partial_\alpha = \partial_{x_\alpha}$, verwenden wir die klassischen Definitionen der Differentialoperatoren:\\
+\begin{align*}
+\nabla v
+&=
+\begin{pmatrix}
+\partial_1 v\\
+\partial_2 v
+\end{pmatrix},
+&
+\nabla\boldsymbol{\psi}
+&=
+\begin{pmatrix}
+\partial_1\psi_1 & \partial_2\psi_1\\
+\partial_1\psi_2 & \partial_2\psi_2
+\end{pmatrix},
+\\[1ex]
+\operatorname{div}\boldsymbol{\psi}
+&=
+\partial_1\psi_1+\partial_2\psi_2,
+&
+\operatorname{Div}\mathbf{L}
+&=
+\begin{pmatrix}
+\partial_1L_{11}+\partial_2L_{12}\\
+\partial_1L_{21}+\partial_2L_{22}
+\end{pmatrix}.
+\end{align*}
+
+Zudem benötigen wir den symmetrischen Gradienten: 
+\begin{align*}
+    \varepsilon(\boldsymbol{\psi}) &= \frac12\left( \nabla\boldsymbol{\psi} + (\nabla\boldsymbol{\psi})^T \right).
+\end{align*}
+Außerdem definieren wir hier folgende Funktionenräume:\\
+\begin{itemize}
+    \item[-] $H^k(\Omega)=\{f \in \Lzwei: D^\alpha f \in \Lzwei, \text{ für alle } |\alpha|\leq k\},$
+    wobei mit $D^\alpha f \in \mathcal{D}'(\Omega)$ die distributionelle Ableitung gemeint ist, mit Norm $\|v\|_{H^k(\Omega)} = \sqrt{\sum_{|\alpha| \leq k}\|D^\alpha v\|^2}$\\
+    \item[-] $L^p(\Omega) = \{f:\Omega \rightarrow\mathbb{R}\, |\, f \text{ messbar}, \int_\Omega|f(x)|^p \, d\mu(x) < \infty \}, \\
+    \quad \text{ mit }(\Omega,\mathcal{A},\mu) \text{ als Maßraum }, 0<p<\infty, \text{ und mit Norm }\|f\|_{L^p(\Omega)} = \big(\int_\Omega|f(x)|^p\,d\mu(x) \big)^\frac{1}{p}$, wobei $\mu$ das Lebesque-Maß bezeichnet.\\
+    \item[-] $\mathbf{L}^2(\Omega)_{sym} = \{\mathbf{L}=(L_{\alpha\beta}): L_{\alpha\beta} = L_{\beta\alpha} \in L^2(\Omega)\}$\\
+    mit Norm $\|\lfett\|_{\lfett^2(\Omega)_{sym}} = \Big( \int_\Omega \lfett : \lfett \, d\mu(x) \Big)^\frac{1}{2}$
+    \end{itemize}
+
+ \chapter{Herleitung der Gleichung}   
+\section{Kirchhoff-Plattenmodell}
+In folgendem Abschnitt werden wir, mithilfe von drei wichtigen Annahmen über Platten, die Kirchhoff-Love Gleichung herleiten.\\
+
+Die Definition einer Platte ist nach dem Kirchhoff-Plattenmodell eine ebene dünne Struktur, in der eine Dimension, in unserem Fall $x_3$, wesentlich kleiner als die anderen beiden ist. Unsere dreidimensionale Platte ist somit im Ausgangs- beziehungsweise unverformten Zustand von folgender Struktur, 
+\begin{equation}\label{3D Struktur Platte}
+    \Omega_{3D} = \Big\{ (x_1,x_2,x_3) \in \mathbb{R}^3: (x_1,x_2) \in \Omega, x_3 \in (-\frac{t}{2},\frac{t}{2})\Big\}, 
+\end{equation}
+wobei $\Omega$ die mittlere Schicht und $t$ die Dicke der Platte bezeichnet.\\
+Ungefähr um das Jahr 1850 wurde von Gustav Robert Kirchhoff (1824-1887) die klassische Plattentheorie entwickelt, die auf drei kinematischen Annahmen basiert:
+\begin{enumerate}
+    \item Gerade Linien, die in unverformtem Zustand orthogonal zur Mittelfläche stehen, bleiben auch nach der Verformung gerade Linien
+    \item Gerade Linien, normal zur Mittelfläche, dehnen sich nicht
+    \item Zur Mittelfläche senkrechte Geraden rotieren derart, dass sie auch nach der Verformung senkrecht zur Mittelfläche stehen
+\end{enumerate}
+
+Aus Punkt 2 können wir folgern, dass die Dicke der Platte konstant bleibt und die Spannung senkrecht zur Platte  als gleich Null angenommen werden kann ($\sigma_{33}=0$).
+
+Diese Theorie funktioniert für dünne Platten, die $\frac{d}{l} \ll 1 $ erfüllen. Für dickere Platten sind diese Annahmen zu einschränkend, da auch eine erhöhte Querschubverformung auftritt, das heißt vor allem die dritte Annahme verletzt wird. Dieses Merkmal wurde zuerst von Eric Reissner im Jahr 1945 und Raymond Mindlin im Jahr 1951 mitberücksichtigt. Sie arbeiteten mit dem Ansatz die Rotation als zusätzliche Unbekannte, neben der Verformung zu betrachten (bekannt als die Reissner-Mindlin-Annahme) und folgende mathematische Form der Verbiegung \textbf{U} = $(U_i)_{i=1}^3$ impliziert:
+\begin{align}
+    \begin{split}
+        & U_j(x_1,x_2,x_3) = u_j(x_1,x_2) - x_3 \theta_j(x_1,x_2) \qquad\text{ für } j=1,2\\
+        & U_3(x_1,x_2,x_3) = u_3(x_1,x_2)
+    \end{split}
+\end{align}
+Dabei beschreibt \textbf{u} = $(u_i)$ die Verformung und $\boldsymbol{\theta}=(\theta_i)$ die Rotation der Normalen. Diese kann auch geschrieben werden, als\footnote{\cite{43}}
+\[\theta_j = \frac{\partial u_3}{\partial x_j}.\]
+
+Betrachten wir nun den Streckungstensor $\mathbf{E(U)}=\operatorname{sym}(\nabla u) \text{ beziehungsweise }E_{ij}(\mathbf{U})= \frac{1}{2}(\partial_jU_i + \partial_iU_j)$, wobei $\partial_i = \partial_{x_i}$, dann erhalten wir:
+\begin{equation}
+    \begin{split}
+        E_{\alpha\beta}(\mathbf{U}) &= \frac{1}{2}(\partial_\beta u_\alpha + \partial_\alpha u_\beta) - x_3 \frac{1}{2}(\partial_\beta \theta_\alpha + \partial_\alpha \theta_\beta) = \varepsilon_{\alpha\beta}(\mathbf{\underline{u}}) + x_3\kappa_{\alpha\beta}(\boldsymbol{\theta}) \\
+        E_{\alpha3}(\mathbf{U}) &= \frac{1}{2}(\partial_\alpha u_3 - \theta_\alpha) = \gamma_\alpha(u_3,\boldsymbol{\theta}) 
+    \end{split}
+\end{equation}
+mit  
+\begin{equation}
+    \begin{split}
+        &\varepsilon_{\alpha\beta}(\mathbf{\underline{u}}) = \frac{1}{2}(\partial_\beta u_\alpha + \partial_\alpha u_\beta), \quad \text{ Membranverformung (Dehnung)} \\
+        &\kappa_{\alpha\beta}(\boldsymbol{\theta}) = -\frac{1}{2}(\partial_\beta \theta_\alpha + \partial_\alpha \theta_\beta), \quad \text{Biegeverformung (Krümmung)} \\
+        &\gamma_\alpha(u_3,\boldsymbol{\theta}) = \frac{1}{2}(\partial_\alpha u_3 - \theta_\alpha), \quad \text{Schubverzerrung (Winkeländerung der Normalen)}
+    \end{split}
+\end{equation}
+
+wobei $\mathbf{\underline{u}} = (u_\alpha)_{\alpha=1,2}$ den horizontalen und $u_3$ den vertikalen Teil der Verschiebung beschreibt.
+
+Erinnern wir uns an die 3. Annahme der Plattentheorie von Kirchhoff, die besagt, dass Linien, die vor Verformung normal zur Mittelfläche waren, auch nach Verformung noch normal zur Mittelfläche stehen, so können wir folgern, dass:
+\[\theta_\alpha = \partial_\alpha u_3\]
+und erhalten
+\begin{equation}\label{3D Belastungstensor}
+    \begin{split}
+        E_{\alpha\beta}(\mathbf{U}) &= \frac{1}{2}(\partial_\beta u_\alpha + \partial_\alpha u_\beta) - x_3 \partial_{\alpha\beta}u_3 =  \varepsilon_{\alpha\beta}(\mathbf{\underline{u}}) + x_3\kappa_{\alpha\beta}(\boldsymbol{\theta})\\ 
+        E_{\alpha3}(\mathbf{U}) &= 0 
+    \end{split}
+\end{equation}
+sowie in weiterer Folge den Krümmungstensor
+\begin{equation}\label{Definition kappa}
+    \kappa_{\alpha\beta}(\boldsymbol{\theta}) = - \partial_{\alpha\beta}u_3.
+\end{equation}
+
+Nach dem Hookschen Gesetz für isotropes\footnote{= richtungsunabhängig dehnbar; es gibt also keine gerichteten Fasern, wie beispielsweise bei Holz}, linear elastisches Material\footnote{\cite{hookschesGesetz} siehe S.94}, gilt
+
+\[ \sigma_{ij} = 2\mu E_{ij} + \lambda (E_{11} + E_{22} + E_{33})\delta_{ij}\]
+mit den Lamé-Konstanten
+\[ \lambda = \frac{\nu E}{(1+\nu)(1-2\nu)} \quad \text{ und } \quad \mu = \frac{E}{2(1+\nu)}\]
+wobei E das Elastizitätsmodul (E-Modul) und $\nu$ die Poisson-Zahl bezeichnen, die abhängig vom Material variieren. (bei Glas: E=70.000 MPa, $\nu$=0,23)
+
+Verwenden wir nun die 2. Annahme der Plattentheorie von Kirchhoff $\sigma_{33}=0$, erhalten wir mit grundlegenden Umformungen: 
+\[ 0 = \sigma_{33} = 2\mu E_{33} + \lambda(E_{11} + E_{22} + E_{33})\delta_{33} = (2\mu + \lambda) E_{33} + \lambda( E_{11} + E_{22}) \]
+\[\Leftrightarrow E_{33} = - \frac{\lambda (E_{11} + E_{22})}{2\mu + \lambda} \]
+Setzen wir die Terme für $\lambda$ und $\mu$ ein, erhalten wir
+\[ E_{33} = -\frac{\nu}{1-\nu}(E_{11} + E_{22}),
+\]
+womit wir durch erneute Umformung 
+\begin{equation*}
+    \begin{split}
+         \sigma_{ij} = 2\mu E_{ij} + \lambda(E_{11} + E_{22} - \frac{\nu}{1-\nu}(E_{11} + E_{22})\delta_{ij} \\
+         = 2\mu E_{ij} + \lambda(\frac{1-2\nu}{1-\nu})(E_{11} + E_{22})\delta_{ij},
+    \end{split}
+\end{equation*}
+erhalten, wo wir wieder die Terme für $\lambda$ und $\mu$ einsetzen wollen:
+\begin{equation*}
+    \begin{split}
+  \sigma_{ij} = \frac{E}{1+\nu}E_{ij} + E \frac{\nu}{(1+\nu)(1-\nu)}(E_{11} + E_{22})\delta_{ij} \\
+  = \frac{E}{1+\nu}\biggl(E_{ij} + \frac{\nu}{1-\nu}(E_{11}+E_{22})\delta_{ij}\biggl)
+    \end{split}
+\end{equation*}
+In der Praxis werden diese Gleichungen oft mithilfe des Materialtensors $\mathcal{C}$ angeschrieben beziehungsweise zusammengefasst
+\begin{equation}
+    \begin{split}
+         \mathcal{C}\mathbf{A} := \frac{E}{1+\nu}\biggl( \mathbf{A} + \frac{\nu}{1-\nu}tr(\mathbf{A})\mathbf{I}\biggl) \quad \text{für alle } \mathbf{A} \in \mathbb{R}^{2x2},
+    \end{split}
+\end{equation} 
+wodurch man folgende vereinfachte Schreibweise erhält:
+\begin{equation}\label{2D reduzierte Schreibweise}
+    \boldsymbol{\sigma}_{2D} = \mathcal{C}\mathbf{E}_{2D}
+\end{equation}
+mit $\boldsymbol{\sigma}_{2D} = (\sigma_{\alpha\beta})$ und $\mathbf{E}_{2D} = (E_{\alpha\beta})$. \\
+
+\begin{remark}
+    Für $\Omega_{3D}$ würde ebenso gelten:
+    \[\boldsymbol{\sigma} = \mathbb{C}\mathbf{E},\]
+    allerdings mit $\mathbb{C}\afett = 2\mu\afett + \lambda\operatorname{tr}(\afett)\mathbf{I} = \frac{E}{1+\nu}\big(\afett + \frac{\nu}{1-2\nu}\operatorname{tr}(\afett)\mathbf{I}\big)$ für $\afett \in \mathbb{R}_{sym}^{3\times 3}$, mit welcher wir im Verlauf der Arbeit allerdings nur kurz arbeiten werden, da im nächsten Abschnitt eine Dimensionsreduktion vorgenommen wird und in weiterer Folge ausschließlich (\ref{2D reduzierte Schreibweise}) verwendet wird. 
+\end{remark}
+
+\section{Eigenschaften des Materialtensors}
+
+Der Materialtensor bezüglich dem Frobenius-Skalarprodukt ist linear, symmetrisch und positiv definit
+\begin{equation}\label{C sym und positiv definit}
+    \begin{split}
+        \mathcal{C}(\afett+\lambda\bfett) = \mathcal{C}\afett + \lambda\mathcal{C}\bfett \qquad &\forall \afett,\bfett \in \mathbb{R}^{2 \times 2}_{sym}\\
+        \mathcal{C}\mathbf{A} : \mathbf{B} = \mathbf{A} : \mathcal{C}\mathbf{B} \qquad &\forall \mathbf{A,B} \in \mathbb{R}^{2 \times 2}_{sym}   \\
+        \mathcal{C}\mathbf{A} : \mathbf{A} > 0 \qquad &\forall \mathbf{A}\neq 0 \in \mathbb{R}^{2 \times 2}_{sym}
+    \end{split}
+\end{equation}
+womit $\mathcal{C}$ ein selbstadjungierter Operator ist und nach dem Spektralsatz reelle Eigenwerte und eine Orthonormalbasis aus Eigenvektoren von $\mathcal{C}$ hat. Aus der positiven Definitheit folgt, dass alle Eigenwerte strikt größer 0 sind, sodass mit $\lambda_{min}(\mathcal{C})$ und $\lambda_{max}(\mathcal{C})$ als kleinsten und größten Eigenwert von $\mathcal{C}$ gilt, dass:
+\begin{equation}\label{Abschätzung Eigenwerte}
+    0 \leq \lambda_{min}(\mathcal{C})\mathbf{A}:\mathbf{A} \leq \mathcal{C}\mathbf{A}:\mathbf{A} \leq \lambda_{max}(\mathcal{C})\mathbf{A}:\mathbf{A} \qquad \forall \mathbf{A} \in \mathbb{R}^{2 \times 2}_{sym}   \\
+\end{equation}
+beziehungsweise gilt sogar strikt größer Null, wenn $A\neq 0$ ist.
+
+\newpage
+\section{Herleitung des Plattenmodells}
+Im folgenden Abschnitt, wollen wir, wie in \cite{43} unser dreidimensionales Problem auf ein zweidimensionales reduzieren. Dafür können wir unser Problem, da die Integrale entweder nur von $x_1,x_2$ oder von $x_3$ abhängen, auf zwei Teilprobleme spalten und diese einzeln behandeln. Wir nennen diese das Membran- und das Biegeproblem. Da das Membranproblem für uns unwichtig ist, arbeiten wir anschließend auschließlich mit dem Biegeproblem weiter. 
+Da wir im Biegeproblem zweite Ableitungen haben, benötigt die direkte Finite-Elemente Methode $C^1$-Basisfunktionen. Um diese Schwierigkeit zu umgehen, wollen wir eine gemischte Variationsformulierung herleiten, die schwächere Regularitätseigenschaften fordert.
+
+Zunächst berechnen wir uns dafür die starke Form, um mehr über die Randbedingungen zu erfahren und die Grundidee der Umformungen besser nachzuvollziehen. Erst danach arbeiten wir mit unserer schwachen Formulierung weiter.\\
+Wir wollen in diesem Kapitel vorerst annehmen, dass alle Funktionen hinreichend glatt sind.
+
+\subsection{Geometrische Benennungen}\label{Geometrische Benennungen}
+Nehmen wir für unsere dreidimensionale Platte ein beschränktes Lipschitz-Gebiet $\Omega_{3D} \subset \mathbb{R}^3$ (siehe (\ref{3D Struktur Platte})) mit dem Rand $\Sigma$, für unser Elastizitätsproblem und betrachten die unverformte, also ebene Mittelfläche $\Omega \subset \mathbb{R}^2$, mit Lipschitz-Rand $\Gamma$ und teilen diesen Rand in Kanten und Ecken auf:
+\begin{equation*}
+    \Gamma = \mathcal{V}_\Gamma \cup \mathcal{E}_\Gamma \quad \text{ mit } \mathcal{E}_\Gamma = \bigcup_{k=1}^K E_k
+\end{equation*}
+wobei $E_k, k=1,...,K$ die Kanten, als offen und möglicherweise kurvenförmig angenommen, und $\mathcal{V}_\Gamma$ die Menge aller Ecken von $\Gamma$ bezeichnen. Die Kanten werden dabei gegen den Uhrzeigersinn durchnummeriert. Zudem sei $\overline{E_k}$ der Abschluss der Kante $E_k$ für $k=1,...,K$ und $x_k$ der jeweilige Startpunkt der Kante. Da wir von einem geschlossenen Rand ausgehen, können wir den index $k=0$ mit $k=K$ identifizieren (für eine Skizze siehe \ref{Skizze des Plattenmodells}). \\
+In dem Bereich der PDEs unterscheiden wir zwischen drei verschiedenen Arten von Randbedingungen - 'clamped', 'simply supported' und 'free', die wir hier wie folgt bezeichnen wollen:
+
+\begin{equation*}
+    \Sigma_c = \Gamma_c \times (-\frac{t}{2},\frac{t}{2}) \quad 
+    \Sigma_s = \Gamma_s \times (-\frac{t}{2},\frac{t}{2}) \quad 
+    \Sigma_f = \Gamma_f \times (-\frac{t}{2},\frac{t}{2})
+\end{equation*}
+
+sodass $\Gamma = \Gamma_c \,\dot\cup\, \Gamma_s \,\dot\cup\, \Gamma_f$. 'Disjunkt' wollen wir hier so verstehen, dass jede Kante nur in eine Kategorie der Randbedingungen fällt, wobei wir die Kanten als maximal annehmen. Das soll heißen, dass es keine zwei Kanten, mit den gleichen Randbedingungen gibt, die mit einem Winkel $\pi$ (180°) zueinanderstehen, also auf der selben Geraden liegen. Wir wollen außerdem fordern, dass die Menge des Dirichletrand positives Maß hat. \\
+Außerdem nehmen wir an, dass auf dem Boden und Deckel von $\Omega_{3D}$ keine Randbedingungen definiert sind. \\
+Die auf den Rand $\Sigma$ wirkenden Flächen- beziehungsweise Zugkräfte sollen durch $\mathbf{g}=(g_i): \Sigma \rightarrow \mathbb{R}^3$ beschrieben werden und die auf ganz $\Omega_{3D}$ wirkenden Volumenkräfte mit $\mathbf{f}=(f_i):\Omega_{3D} \rightarrow \mathbb{R}^3$
+
+\subsection{Schwache Formulierung des dreidimensionalen Elastizitätsproblems}
+Wir betrachten erneut (\ref{2D reduzierte Schreibweise}) und bilden die Variationsformulierung des Problems:
+\begin{equation}
+    \begin{split}
+        \mathbf{\sigma} = \mathbb{C}\mathbf{E} \quad &\text{ auf } \Omega_{3D} \\
+        -\divergenz(\boldsymbol{\sigma}) = \mathbf{f} \quad &\text{ auf } \Omega_{3D} \\
+        \boldsymbol{\sigma}\mathbf{n} = \mathbf{g} \quad &\text{ auf } \Sigma
+    \end{split}
+\end{equation}
+
+Wenn wir von $-\divergenz(\boldsymbol{\sigma}) = \mathbf{f}$ die schwache Formulierung bilden:
+\[ -\int_{\Omega_{3D}}\divergenz(\boldsymbol{\sigma) \cdot V}dV = \int_{\Omega_{3D}}\mathbf{f \cdot V}dV,\]
+erhalten wir mit dem Satz von Gauß und $\boldsymbol{\sigma}\mathbf{n} = \mathbf{g}$:
+\begin{align*}
+    \int_{\Omega_{3D}}\boldsymbol{\sigma}:\boldsymbol{\nabla} \mathbf{V}dV - \int_\Sigma \boldsymbol{\sigma}\mathbf{n \cdot V} \,dV &= \int_{\Omega_{3D}}\mathbf{f \cdot V}dV\\
+    \Leftrightarrow \int_{\Omega_{3D}}\boldsymbol{\sigma}:\boldsymbol{\nabla} \mathbf{V}dV  &= \int_{\Omega_{3D}}\mathbf{f \cdot V}dV + \int_\Sigma \mathbf{g} \cdot \mathbf{V} d\Lambda
+\end{align*}
+
+Setzen wir $\nabla V = E(V) + W(V)$ mit dem symmetrischen Teil $E(V) = \frac{1}{2}(\nabla V + \nabla V^T)$ und dem schiefsymmetrischen Teil $W(V) = \frac{1}{2}(\nabla V - \nabla V^T)$ dann erhalten wir:
+\[ \sigma:\nabla V = \sigma : E(V) + \sigma : W(V) = \sigma:E(V)\]
+da nach \textit{Lemma \ref{Frobenius-Skalarprodukt}} gilt, dass $\sigma:W(V)=0$.\\
+Damit kommen wir, wobei wir $\boldsymbol{\sigma}$ wieder abhängig von dem ursprünglich gesuchten $\mathbf{U}$ setzen, zu folgender Variationsformulierung:
+\begin{equation}\label{schwache Form mit (Bi-)Linearform}
+      \underbrace{\int_{\Omega_{3D}}\boldsymbol{\sigma(U)}:\mathbf{E(V)}dV}_{a(U,V)}  = \underbrace{\int_{\Omega_{3D}}\mathbf{f \cdot V}dV + \int_\Sigma \mathbf{g} \cdot \mathbf{V} d\Lambda}_{F(V)} 
+\end{equation}
+für alle $\vfett$, welche die homogenen Randbedingungen der PDE erfüllen.
+\begin{comment}
+wobei $a(U,V)$ eine symmetrische, positiv definite Bilinearform ist, was aus (\ref{C sym und positiv definit}) folgt und $F(V)$ eine Linearform, womit man die schwache Form auch zu einem Minimierungsproblem über das entsprechende Energieintegral umformen könnte. (TODO siehe Appendix) 
+\end{comment}
+\begin{comment}
+Nun wollen wir mithilfe eines Lemmas den Zusammenhang der schwachen Formulierung einer PDE und des Energieintegrals zeigen.\\
+
+\begin{lemma}\footnote{\cite{femscript} S.40}\label{schwForm und Energieintegral}
+    Sei $V$ ein Hilbertraum, $a: V\times V \rightarrow \mathbb{R}$ eine koerzive, symmetrische Bilinearform auf V, F $\in V'$, dann gilt für $u \in V:$
+    \[ a(u,v) = F(v) \quad \forall v \in V \quad \Leftrightarrow \quad  E(u) = min_{v \in V} E(v)\]
+    wobei $E(v) := a(v,v) - 2F(v)$
+\end{lemma}
+\begin{proof}
+    Für die Rückrichtung, sei $v \in V$ beliebig und sei $u \in V$, sodass $E(u) = min_{v \in V} E(v)$ gilt.\\
+    Definieren wir uns $e: \mathbb{R} \rightarrow \mathbb{R}$ mit $e(t) := E(u + tv) = E(u) +2t(a(u,v)-F(v)) + t^2a(v,v)$, dann hat e bei $t=0$ ein Minimum, woraus folgt, dass $e'(0)=0$.\\
+    Also gilt $a(u,v)-F(v) = 0$, womit die Rückrichtung gezeigt ist.  
+    
+    Für die Hinrichtung sei $u \in V$ die Lösung von $a(u,v)=F(v)$ für alle $v \in V$, dann folgt, dass $E(u) \leq E(u) + a(v,v) = e(1) = E(u+v)$.\\
+    Also gilt für $w \in V$, mit $v := w-u$:
+    \[E(u) \leq E(w)\]
+    also gilt $E(u) = min_{v \in V} E(v)$
+\end{proof}
+
+Nun müssen wir noch zeigen, dass $a$ koerziv ist:\\
+Wir wissen aus (\ref{Abschätzung Eigenwerte}), dass $ \mathcal{C} \mathbf{E(V)}:\mathbf{E(V)} \geq \lambda_{min}(\mathcal{C})|\mathbf{E(V)}|^2$, woraus folgt, dass:
+\[a(\mathbf{V},\mathbf{V}) \geq \lambda_{min}(\mathcal{C})\int_{\Omega_{3D}}|\mathbf{E(V)}|^2 \,dV = \lambda_{min}(\mathcal{C}) \|\mathbf{E(V)}\|_{L^2(\Omega_{3D})}^2\]
+und nach der Korn-Ungleichung (\ref{Korn Ungleichung}) folgt, dass für $V \in H_0^1(\Omega)$:
+    \[a(\mathbf{V},\mathbf{V}) \geq \lambda_{min}(\mathcal{C}) \|\mathbf{E(V)}\|_{L^2(\Omega_{3D})}^2 \geq \lambda_{min}(\mathcal{C}) \frac{1}{C_K^2} \|V\|^2_{H^1(\Omega_{3D})}\]
+
+Also ist $a(U,V)$ koerziv auf $H_{\Gamma_D}^1(\Omega_{3D})=\{U \in H^1(\Omega_{3D}): U=0 \text{ auf } \Gamma_D\}$, wobei $\Gamma_D$ den Dirichlet-Rand bezeichnet, also $\Gamma_D = \Gamma_c \cup \Gamma_s$, welcher nach Vorraussetzung positives Maß hat.
+
+Nach Lemma \ref{schwForm und Energieintegral} ist $U = (\underline{\mathbf{U}},U_3)$ also genau dann eine Lösung für (\ref{schwache Form}), wenn es das Energieintegral 
+\begin{equation}
+    J(\mathbf{U}) = \frac{1}{2}\int_{\Omega_{3D}}\boldsymbol{\sigma(U)}:\mathbf{E(V)}dV - \int_{\Omega_{3D}}\mathbf{f \cdot V}dV - \int_\Sigma \mathbf{g} \cdot \mathbf{V} d\Lambda
+\end{equation}
+minimiert und die gegebenen Randbedingungen erfüllt:
+\begin{equation}
+    \begin{split}
+        \underline{U} = \underline{\hat{U}}, U_3 = \hat{U_3} \quad \text{ auf } \Sigma_c,\\
+        \underline{U}_t = \underline{\hat{U}}_t, U_3 = \hat{U_3} \quad \text{ auf } \Sigma_s,\\
+    \end{split}
+\end{equation}
+\end{comment}
+\subsection{Aufteilung in Membran- und Biegeproblem}
+Wenn wir nun in unserer schwachen Formulierung (\ref{schwache Form mit (Bi-)Linearform}) über $x_3$ integrieren, uns die bereits geltenden Gleichungen (\ref{2D reduzierte Schreibweise}) und (\ref{3D Belastungstensor}) in Erinnerung rufen und zusätzlich benutzen, dass $\sigma_{\alpha 3} = 0 = \sigma_{33}$, erhalten wir folgendes Problem:\\
+Wir suchen eine Lösung $\mathbf{u} = (\mathbf{\underline{u}},u_3)$, welche die Randbedingungen 
+\begin{equation}
+    \begin{split}
+            \underline{\mathbf{u}} = \underline{\mathbf{\hat{u}}}, u_3 = \hat{u}_3, \partial_n u_3 = \hat{\theta}_n \quad \text{ auf } \Gamma_c\\
+            \underline{u}_t = \underline{\hat{u}}_t, u_3 = \hat{u}_3 \quad \text{ auf } \Gamma_s
+    \end{split} 
+\end{equation}
+erfüllt und die folgende Gleichung, für alle $\mathbf{v}=(\underline{\mathbf{v}},v_3)$, die den homogenen Teil der essenziellen Randbedingungen erfüllen, löst:
+\begin{equation}\label{feine Form der schwachen Form}
+    \begin{split}
+        &\int_\Omega \big(t \,\mathcal{C}\varepsilon(\mathbf{\underline{u}}):\varepsilon(\mathbf{\underline{v}}) + \frac{t^3}{12} \mathcal{C}\kappa(u_3):\kappa(v_3)\big)\,dx \\
+        &\quad = \int_\Omega\big(\underline{\mathbf{\hat{f}}}\cdot \underline{v} - \mathbf{\hat{c}}\cdot \nabla v_3 + \hat{f}_3 v_3\big)\,dx \\
+        &\qquad+ \int_{\Gamma_s} \big(\hat{N}_n \underline{v}_n - \hat{M}_n \partial_{n}v_3\big)\,ds + \int_{\Gamma_f}\big( \mathbf{\hat{N}}\cdot \underline{v} - \hat{M}\cdot \nabla v_3 + \hat{Q}v_3\big)\,ds,
+    \end{split}
+\end{equation}
+
+wobei $\mathbf{\underline{f}} = (\underline{\mathbf{\hat{f}}},\hat{f}_3)$ und $\mathbf{\hat{c}}=(\hat{c}_\alpha)$ definiert durch:
+
+\begin{align*}
+\hat{f}_{\alpha} = \int_{-\frac{t}{2}}^{\frac{t}{2}} f_{\alpha}\,dx_3 + \langle g_{\alpha}\rangle, \quad
+\hat{f}_{3} = \int_{-\frac{t}{2}}^{\frac{t}{2}} f_{3}\,dx_3 + \langle g_{3}\rangle, \quad
+\hat{c}_{\alpha} = \int_{-\frac{t}{2}}^{\frac{t}{2}} f_{\alpha}\,x_3\,dx_3 +\langle g_{\alpha}x_3\rangle .
+\end{align*}
+
+mit:
+\begin{equation*}
+\langle a(x_1,x_2,x_3)\rangle = a\big(x_1,x_2,-\frac{t}{2}\big) + a\big(x_1,x_2,\frac{t}{2}\big).
+\end{equation*}
+
+Die Randkräfte $\hat{N}=(\hat{N}_{\alpha})$, die Querkraft $\hat{Q}$ und die Momente
+$\hat{M}=(\hat{M}_{\alpha})$ sind definiert durch
+
+\begin{align}
+\hat{N}_{\alpha} =
+\int_{-\frac{t}{2}}^{\frac{t}{2}} g_{\alpha}\,dx_3, \quad
+\hat{Q} = \int_{-\frac{t}{2}}^{\frac{t}{2}} g_{3}\,dx_3, \quad
+\hat{M}_{\alpha} = \int_{-\frac{t}{2}}^{\frac{t}{2}} g_{\alpha}\,x_3\,dx_3.
+\end{align}
+
+Da die Terme des Variationsproblems \ref{feine Form der schwachen Form} entweder von $\underline{u}$ oder $u_3$ abhängen, zerfällt das Problem in ein Membran- und ein Biegeproblem:
+
+\textbf{Membran/Dehnungsproblem}
+Wir suchen $\underline{u}=(u_\alpha)$, dass die Randbedingungen
+\begin{align*}
+    \underline{\mathbf{u}} = \underline{\mathbf{\hat{u}}} \quad \text{ auf } \Gamma_c,\\
+    \unterline{u}_t = \underline{\hat{u}}_t \quad \text{ auf } \Gamma_s
+\end{align*}
+und die Gleichung 
+\begin{align}
+    \int_\Omega t\mathcal{C}\varepsilon(\mathbf{\underline{u}}) :\varepsilon(\mathbf{\underline{u}})\,dx = \int_\Omega \underline{\mathbf{\hat{f}}}\cdot \underline{\mathbf{v}}\,dx + \int_{\Gamma_s}\hat{N}_n \underline{v}_n\,ds + \int_{\Gamma_f}\hat{\mathbf{N}}\cdot \underline{\mathbf{v}}\,ds
+\end{align}
+
+für alle $\underline{\mathbf{v}} = (v_\alpha)$, die den homogenen Teil der Dirichlet Randbedingungen genügen, erfüllt.
+
+\textbf{Biegeproblem}
+
+Wir suchen $u_3$, dass die Randbedingungen
+\begin{align}\label{Randbedingugnen - Biegeproblem}
+    u_3 = \hat{u}_3, \partial_n u_3 = \hat{\theta}_n \quad \text{ auf } \Gamma_c,\\
+    u_3 = \hat{u}_3 \quad \text{ auf } \Gamma_s
+\end{align}
+und die Gleichung 
+\begin{equation}\label{schwache Form - Biegeproblem}
+    \begin{split}
+        &\int_\Omega \frac{t^3}{12} \mathcal{C}\kappa(u_3):\kappa(v_3)\,dx \\
+        &\quad = \int_\Omega \big( \hat{f}_3 v_3 - \mathbf{\hat{c}}\cdot \nabla v_3 \big)\,dx - \int_{\Gamma_s} \hat{M}_n \partial_{n}v_3\,ds + \int_{\Gamma_f}\big( \hat{Q}v_3 - \hat{M}\cdot \nabla v_3 \big)\,ds
+    \end{split}
+\end{equation}
+
+für alle $\underline{\mathbf{v}} = (v_\alpha)$, die den homogenen Teil der Dirichlet Randbedingungen genügen, erfüllt.\\
+
+\begin{remark}
+    Hier beschreibt das Membranproblem die Dehnung der Mittelfläche und das Biegeproblem, die Auslenkung senkrecht zur Platte, weswegen uns das Membranproblem für den weiteren Verlauf nicht mehr weiter beschäftigen wird.\\
+    Trotzdem wollen wir hier betonen, dass das Membranproblem nur Ableitungen erster Ordnung enthält und somit mit gängigen Methoden gelöst werden kann, wohingegen das Biegeproblem, aufgrund von $\boldsymbol{\kappa}$, siehe (\ref{Definition kappa}), auch Ableitungen zweiter Ordnung enthält, was wir nun genauer betrachten werden. \\
+    Ab hier wollen wir statt $u_3$ nur noch $u$ schreiben, da es von hier an, die einzige Unbekannte ist. Außerdem wollen wir bemerken, dass $u_3$ nur abhängig von $x_1$ und $x_2$ war, womit wir unsere angekündigte Dimensionsreduktion erreicht haben.
+\end{remark}
+\begin{comment}
+Wir wollen hier einen kurzen Überblick geben, was wir im kommenden Abschnitt mit unserem Biegeproblem machen werden:
+\begin{itemize}
+    \item wir definieren im Folgenden den Biegemomentensor $M=-t^3/12\,\mathcal{C}\nabla^2u$, setzen diesen in die linke Seite unserer zuvor berechneten schwachen Formulierung des Biegeproblems (\ref{schwache Form - Biegeproblem}) ein und integrieren zwei Mal partiell darüber
+    \item vernachlässigen wir die Randterme, erhalten wir im Inneren des Gebiets bereits die starke Form:
+    \begin{align}\label{starke Form - kurz}
+         \divergenz \Div M = f \quad \text{ auf } \Omega
+    \end{align}
+    mit
+    \[ M = - \frac{t^3}{12}\mathcal{C}\nabla^2u\]
+    was ein System zweiter Ordnung ergibt, wodurch die schwache Formulierung nur noch Ableitungen erster Ordnung enthält und somit auf klassische Weise lösbar wäre. Mithilfe der starken Form sehen wir welche Randbedingungen unsere Variationsformulierung beinhaltet, was wir für die spätere Konstruktion unserer Funktionenräume $W_0$ und $W_g$ brauchen werden.
+    \item danach leiten wir uns die Variationsformulierung des Biegeproblems her 
+    \begin{equation*}
+    \int_\Omega \hat{\mathcal C}\nabla^2u:\nabla^2v\,dx = \langle \hat F,v\rangle \qquad \forall v\in W_0,
+    \end{equation*}
+    welche wir für den nächsten Abschnitt brauchen werden
+\end{itemize}
+\end{comment}
+
+\subsubsection{Starke Form des Biegeproblems}
+
+Wir definieren hier den Biegemomenttensor M:
+\begin{equation}\label{Biegemomenttensor M - mit C}
+    M = \frac{t^3}{12}\mathcal{C}\kappa(u) = - \frac{t^3}{12}\mathcal{C}\nabla^2u    
+\end{equation}
+Dazu setzen wir in die linke Seite der schwachen Formulierung des Biegeproblems (\ref{schwache Form - Biegeproblem}) ein, wobei für $u=u_3$ gilt, dass $\kappa(u)=-\nabla^2u$:
+\begin{equation}
+    \begin{split}
+        -\int_\Omega M:\nabla^2v\,dx &= \int_\Omega \Div \mathbf{M} \cdot \nabla v\,dx - \int_\Gamma (\mathbf{Mn})\cdot \nabla v\,ds \\
+        &= -\int_\Omega (\divergenz \Div \mathbf{M})v\,dx + \int_\Gamma (\Div\mathbf{M\cdot n}) v\,ds - \int_\Gamma (\mathbf{Mn})\cdot \nabla v\,ds. 
+    \end{split}
+\end{equation}
+da $\nabla v = (\partial_n v)\mathbf{n} + (\partial_t v)\mathbf{t}$ gilt, erhalten wir für das letzte Integral:
+\begin{equation}\label{1 Integral - Mn * grad(v) über Gamma}
+    \begin{split}
+        \int_\Gamma (\mathbf{Mn})\cdot \nabla v\,ds = \int_\Gamma (M_{nn}\partial_n v + M_{nt}\partial_t v)\,ds
+    \end{split}
+\end{equation}
+dabei ist $M_{nn} = \mathbf{Mn \cdot n}$ und es sei erinnert dass $v: \Omega \rightarrow \mathbb{R}$, da $v$ ebenso wie $u$ nur noch die reduzierte Funktion auf die dritte Komponente ist, im Integral also als Skalar wirkt.\\
+
+\begin{definition}
+    Mit der Schreibweise, die wir zu Beginn des Kapitels \ref{Geometrische Benennungen} festgelegt haben definieren wir für eine Funktion $f$, mit
+    $f|_{E_{k}} \in C^0(\overline{E_k})$ für $k=1,...K$,\footnote{Um die Vorraussetzung dieser Definition abzuschwächen, wäre es auch möglich für $f$ nur zu fordern, dass $f|_{E_{k}} \in H^1(E_k)$ für $k=1,...K$, da diese nach dem Einbettungssatz von Sobolev (\ref{Einbettungssatz von Sobolev}) einen am Rand stetigen Repräsentaten besitzt} die Einschränkung von $f$ auf dem Rand einer Kante $E_{k-1}$ mit
+    \begin{align}
+        f|_{\partial E_{k-1}} = f(x_k) - f(x_{k-1}) \quad \forall k=1,2,...K
+    \end{align}
+    und den Sprung an einem Eckpunkt mit
+    \begin{align}
+        \llbracket  f \rrbracket_{x_k} = f(x_k^-) - f(x_k^+) \quad \forall k=1,2,...K
+    \end{align}
+    wobei die einseitigen Limiten gegeben sind, als:
+    \begin{align}
+        f(x_k^-) = \lim \limits_{\varepsilon\rightarrow 0}f(x_k -\varepsilon \mathbf{t}_{k-1}) \quad \text{ und } \quad 
+        f(x_k^+) = \lim \limits_{\varepsilon\rightarrow 0}f(x_k +\varepsilon \mathbf{t}_{k})
+    \end{align}
+    mit $\mathbf{t}_k$ ist jeweils der Tangentialvektor entlang der Kante $E_k$
+\end{definition}
+
+Als nächstes integrieren wir partiell über (\ref{1 Integral - Mn * grad(v) über Gamma}) und erhalten:
+\begin{align*}
+    \int_{\Gamma} (Mn)\cdot \nabla v \,\,ds&=
+    \int_{\Gamma}\left(M_{nn}\,\partial_n v - \partial_t M_{nt}\,v \right)\,ds + \sum_{E\in\mathcal{E}_\Gamma} \left(M_{nt}v(x) \right)|_{\partial E}\\
+    &= \int_{\Gamma} \left(M_{nn}\,\partial_n v - \partial_t M_{nt}\,v \right)\,ds + \sum_{x\in\mathcal{V}_\Gamma} \llbracket M_{nt}\rrbracket_x\,v(x).
+\end{align*}
+
+Dadurch erhalten wir für die linke Seite von (\ref{schwache Form - Biegeproblem})
+\begin{align}
+    & -\int_{\Omega} M:\nabla^2 v\,dx = -\int_{\Omega} (\divergenz \Div M)v\,dx\\ 
+    &\quad + \int_{\Gamma_f} \left( \partial_t M_{nt} + \Div M\cdot n \right) v\,ds 
+    - \int_{\Gamma_s\cup\Gamma_f} M_{nn}\,\partial_n vds - \sum_{x\in\mathcal{V}_{\Gamma,f}} \llbracket M_{nt}\rrbracket_xv(x).
+\end{align}
+dabei sei $\mathcal{V}_{\Gamma,f}$ die Menge aller Eckpunkte, deren zwei benachbarte Ecken zu $\Gamma_f$ gehören.\\
+
+\begin{remark}
+    Wir haben als Voraussetzung von $v$ gefordert, dass es den homogenen Teil der Dirichlet-Randbedingungen erfüllt, siehe (\ref{Randbedingugnen - Biegeproblem}), weswegen Integrale, wie $ \int_{\Gamma_c} M_{nn}\,\partial_n v \,ds$ oder $\int_{\Gamma_c \cup \Gamma_s} \left( \partial_t M_{nt} + \Div M\cdot n \right) v\,ds$ gleich Null sind und somit weggelassen werden können. 
+\end{remark}
+
+Für die rechte Seite von (\ref{schwache Form - Biegeproblem}) integrieren wir über den Teil, welcher $\hat{\mathbf{c}}$ enthält, partiell und erinnern uns außerdem, dass $\nabla v = (\partial_n v)\mathbf{n} + (\partial_t v)\mathbf{t}$ gilt:
+
+\begin{equation}
+    \begin{split}
+        &\int_{\Omega} \left(\hat f_3\,v - \hat c\cdot\nabla v \right)dx - \int_{\Gamma_s} \hat M_n\,\partial_n v\,ds + \int_{\Gamma_f} \left( \hat Q\,v -  \hat M\cdot\nabla v \right)ds \\
+        &\quad = \int_{\Omega} \left( \hat f_3 +
+        \divergenz\hat c \right) v\,dx - \int_{\Gamma_f} \hat{c}_n \, v ds- \int_{\Gamma_s\cup\Gamma_f} \hat M_n \partial_n v\,ds + \int_{\Gamma_f} \left( \hat Q\,v - \hat M_t\,\partial_t v \right)ds \\
+        &\qquad = \int_{\Omega} \left( \hat f_3 +
+        \divergenz \hat c \right) v\,dx - \int_{\Gamma_s\cup\Gamma_f} \hat M_n\,\partial_n v\,ds + \int_{\Gamma_f} \underbrace{ \left( \hat Q + \partial_t\hat M_t - \hat c_n \right)}_{=: \hat{V}_n}  v\,ds- \sum_{x\in\mathcal{V}_{\Gamma,f}} \llbracket \hat M_t\rrbracket_x\,v(x).
+    \end{split}
+\end{equation}
+wobei $\int_{\Gamma_f} \hat{M}_t \partial_t \, v \, ds = - \int_{\Gamma_f} \partial_t \hat{M}_t \cdot v \, ds + \sum_{x\in\mathcal{V}_{\Gamma,f}} \llbracket \hat{M}_t\rrbracket_x\,v(x)$
+
+Nun können wir die beiden Seiten wieder gleichsetzen und erhalten
+\begin{equation}
+    \begin{split}
+        &\int_{\Omega} \Big( -(\divergenz\Div M) - (\hat f_3+\operatorname{div}\hat c) \Big) v\,dx
+        - \int_{\Gamma_s\cup\Gamma_f} (M_{nn}-\hat M_n)\, \partial_n v\,ds \\
+        &\quad + \int_{\Gamma_f} \Big( (\partial_t M_{nt} +\operatorname{Div}M\cdot n) - \hat V_n \Big) v\,ds - \sum_{x\in\mathcal{V}_{\Gamma,f}} ( \llbracket M_{nt}\rrbracket_x - \llbracket \hat M_t\rrbracket_x ) v(x)=0
+    \end{split}
+\end{equation}
+Betrachten wir nun als Testfunktionen nur noch $v \in C^\infty_0(\Omega)$, sodass $v=0 \text{ auf } \Gamma$ gilt und $\partial_n v = 0$ folgt (v ist außerhalb jeder kompakten Teilmenge von $\Omega$ gleich 0), dann erhalten wir 
+\[
+\int_{\Omega} (\divergenz\Div M) + (\hat f_3+\operatorname{div}\hat c) v\,dx = 0
+\]
+und damit die starke Form
+\[ -\divergenz\Div \mathbf{M} = \hat{f}_3 + \divergenz\mathbf{\hat{c}} \quad \text{ auf } \Omega\]
+
+also kennen wir bereits die PDE im Inneren und können den Volumenterm ignorieren, wodurch sich folgendes ergibt:
+\[
+\int_{\Gamma_s\cup\Gamma_f} (M_{nn}-\hat M_n)\, \partial_n v\,ds = 0
+\]
+Daraus folgern wir, dass 
+\[ 
+M_{nn} = \hat{M}_n \quad \text{ auf } \Gamma_s \cup \Gamma_f
+\]
+Betrachten wir nun Testfunktionen $v$, die nur noch auf $\mathcal{V}_{\Gamma,f}$ verschwinden, also $v(x)=0 \text{ für alle } x\in \mathcal{V}_{\Gamma,f}$, dann erhalten wir
+\[
+\int_{\Gamma_f} \Big( (\partial_t M_{nt} +\operatorname{Div}M\cdot n) - \hat V_n \Big) v\,ds = 0
+\]
+also in starker Form
+\[
+\partial_t M_{nt} +\operatorname{Div}M\cdot n = \hat V_n \quad \text{ auf } \Gamma_f
+\]
+Sei nun $v$ auch noch auf $\mathcal{V}_{\Gamma,f}$ beliebig, erhalten wir zusätzlich
+\[
+\llbracket M_{nt}\rrbracket_x = \llbracket \hat M_t\rrbracket_x \quad \forall x \in \mathcal{V}_{\Gamma,f}
+\]
+
+Zusammenfassend haben wir für unser Plattenbiegungsproblem nun die starke Form
+\begin{equation}\label{starke Form - Biegeproblem inkl. Randbedingungen}
+    \begin{split}
+        -\divergenz\Div \mathbf{M} = \hat{f}_3 + \divergenz\mathbf{\hat{c}} \quad \text{ auf } \Omega \quad \text{ mit } M = - \frac{t^3}{12}\mathcal{C}\nabla^2u
+    \end{split}
+\end{equation}
+mit Randbedingungen
+\begin{align*}
+    &u=\hat{u}_3,  &&\partial_n u = \hat{\theta}_n && \text{ auf } \Gamma_c \\
+    &u=\hat{u}_3,  &&M_{nn} = \hat{M}_n \quad &&\text{ auf } \Gamma_s\\
+    &M_{nn} = \hat{M}_n, &&\partial_t M_{nt} +\Div M\cdot n = \hat V_n \quad &&\text{ auf } \Gamma_f\\
+    &\llbracket M_{nt}\rrbracket_x = \llbracket \hat M_t\rrbracket_x \quad \forall x \in \mathcal{V}_{\Gamma,f}
+\end{align*}
+wobei wieder $\hat{V}_n = \hat{Q} +\partial_t \hat{M}_t -\hat{c}_n$
+
+\subsubsection{Schwache Form des Biegeproblems}
+Wir hatten zuvor angenommen, dass alle Funktionen hinreichend glatt sind. Um die Variationsformulierung allerdings mathematisch sauber anzugeben, müssen wir geeignete Funktionenräume definieren:
+\begin{align}
+    &W_0 = \{v\in H^2(\Omega): v=0, \partial_n v=0 \text{ auf } \Gamma_c, v=0 \text{ auf } \Gamma_s\}\\
+    &W_g = \{v\in H^2(\Omega): v=\hat{u}_3, \partial_n v=\hat{\theta}_n \text{ auf } \Gamma_c, v=\hat{u}_3 \text{ auf } \Gamma_s\}
+\end{align}
+mit der Norm $\|v\|_W = \|v\|_{H^2(\Omega)}$\\
+
+Wir definieren $\hat{\mathcal{C}} := t^3/12\,\mathcal{C}$ und suchen 
+nun \(u\in W_g\), sodass:
+
+\begin{equation}\label{Variationalform - Biegeproblem}
+\int_\Omega \hat{\mathcal C}\nabla^2u:\nabla^2v\,dx = \langle \hat F,v\rangle \qquad \forall v\in W_0.
+\end{equation}
+wobei
+\begin{equation}
+    \begin{split}
+        \langle \hat{F},v\rangle := \langle F,v\rangle - \int_{\Gamma_s\cup\Gamma_f} \hat M_n\,\partial_n v\,ds + \int_{\Gamma_f} \hat V_n\,v\,ds - \sum_{x\in\mathcal V_{\Gamma,f}} \hat R_x\,v(x),
+    \end{split}
+\end{equation}
+mit
+\begin{align*}
+    \langle F,v\rangle &:= \int_\Omega \hat (f_3+\divergenz\hat c)\,v\,dx,\\
+    \hat V_n &:= \partial_t\hat M_t+\hat Q-\hat c_n, \\
+    \hat R_x &:= \llbracket \hat M_t\rrbracket_x.
+\end{align*}
+
+Für den neu definierten Materialtensor $\mathcal{C}$ gilt nun
+
+\begin{equation}\label{modifizierter Materialtensor}
+\hat{\mathcal C}A
+=
+D
+\left(
+A
++
+\frac{\nu}{1-\nu}
+\operatorname{tr}(A)I
+\right),
+\qquad \forall
+A\in\mathbb R^{2\times2}_{sym} \quad \text{ mit } D := \frac{t^3}{12} \frac{E}{1+\nu}
+\end{equation}
+\newpage
+
+\section{Lösbarkeit des Biegeproblems}
+Wir fordern von hier an, dass $\hat{u}_3$ und $\hat{\theta}_n$ hinreichend regulär sind, sodass eine Fortsetzung $\overline{u} \in \Hzwei$ existiert, womit jede Funktion $w \in W_g$ als Summe von $\overline{u}$ und einer Funktion $v \in W_0$ geschrieben werden kann, also $W_g = \overline{u} + W_0$ gilt. $\overline{u}$ muss also erfüllen:
+\begin{align*}
+    \overline{u}&=\hat{u}_3 \text{ auf }\Gamma_c \cup \Gamma_s\\
+    \partial_n\overline{u} &= \hat{\theta}_n \text{ auf }\Gamma_c
+\end{align*}
+
+Außerdem soll gelten, dass $\hat{M}_n \in L^2(\Gamma_s \cup \Gamma_f)$, $\hat{V}_n \in L^2(\Gamma_f)$ und $\hat{F} \in W_0^*$, wobei wir damit den topologischen Dualraum von $W$ bezeichnen\footnote{Der topologische Dualraum bezeichnet alle stetigen Funktionale von W in den Skalarkörper.}.
+
+
+
+Zusätzlich gehen wir in dieser Arbeit ausschließlich von homogenen Randbedingungen aus; inhomogene Randbedingungen werden für unser Glasbiegeproblem nicht verwendet und würden für eine Bachelorarbeit den Rahmen sprengen.\footnote{\cite{JKU_Paper}: Kapitel 2.7 behandelt inhomogene Randbedingungen}. Zur Klarstellung, was hier unter homogenen Randbedingungen verstanden wird: wir meinen hier nicht nur die Randbedingungen, die in der Definition von $W_0$ und $W_g$ verwendet wurden, sondern alle Randbedingungen, die wir bei der starken Form unseres Biegeproblems bei (\ref{starke Form - Biegeproblem inkl. Randbedingungen}) angeführt hatten.\\
+Somit gilt $W:=W_0 = W_g$ und $\hat{F}=F$.
+
+
+Außerdem nehmen wir an, dass die Randbedingungen auf $W_0$ derart sind, dass keine Starrkörperbewegung möglich ist, also für "$v \in W_0: \nabla^2v=0$ impliziert $v=0$" und dass $\Gamma_c$ zumindest eine nicht triviale Kante $E \in \mathcal{E}_\Gamma$ enthält. Das Problem, kann zwar auch ohne diese Voraussetzungen gelöst werden, (es wäre sowohl mit $\Gamma_c=\emptyset$, als auch mit Starrkörperbewegungen möglich), es wäre aber ebenso zu komplex, diese Fälle in der Arbeit zu betrachten.\footnote{\cite{JKU_Paper}: siehe Remark 2.25 (S.39-40)}
+
+\subsubsection{Existenz und Eindeutigkeit des Biegeproblems}
+Betrachten wir also die Gleichung (\ref{Variationalform - Biegeproblem}) mit gesuchtem $u \in W$
+\begin{equation*}
+    \underbrace{\int_\Omega \hat{\mathcal C}\nabla^2u:\nabla^2v\,dx}_{\hat{a}(u,v)} = \underbrace{\langle F,v\rangle}_{F(v)} \qquad \forall v\in W.
+\end{equation*}
+Wir wollen nun mithilfe des Satz von Lax-Milgram die Existenz und Eindeutigkeit dieses Problems zeigen. Da wir $\hat{F} \in W_0^*$ vorrausgesetzt haben, ist $F$ stetig.
+\begin{comment}
+\textbf{$a$ ist symmetrisch}\\
+Da $\hat{\mathcal{C}}\mathbf{A:B} = \hat{\mathcal{C}}\mathbf{B:C}$, folgt $\hat{a}(u,v) = \hat{a}(v,u)$, also ist $a$ symmetrisch.\\   
+\end{comment}
+
+\textbf{$a$ ist stetig}\\
+Da $\hat{\mathcal{C}}$ stetig und linear ist, gilt $\|\CDach\|<\infty$, also
+\begin{align*}
+    &|\hat{a}(u,v)| = \Bigg|\int_{\Omega} \CDach\nabla^2u:\nabla^2v \,dx\Bigg|\leq \|\CDach\| \int_\Omega |\nabla^2u:\nabla^2v|\,dx \leq \|\CDach\| \int_\Omega \|\nabla^2u\|\|\nabla^2v\|\,dx\\ &\quad \overset{\text{C.-S.-Ungl.}}{\leq} \|\CDach\| \|\nabla^2u\| \|\nabla^2v\| \leq \|\CDach\| \|u\|_{H^2(\Omega)}\|v\|_{H^2(\Omega)} < \infty,
+\end{align*}
+womit $a$ beschränkt und somit auch stetig ist
+
+\textbf{$a$ ist koerziv}\\
+Wir müssen zeigen: $\exists c>0: a(v,v) \geq c \|v\|^2_{H^2(\Omega)}$.\\
+
+Da $\hat{\mathcal{C}}\mathbf{A:A}\geq \lambda_{min}(\hat{\mathcal{C}})\mathbf{A:A}=\lambda_{min}(\hat{\mathcal{C}})|\mathbf{A}|^2$ für alle $\mathbf{A} \in \mathbb{R}^{2\times2}_{sym}$ folgt
+\[a(v,v) = \int_\Omega \hat{\mathcal C}\nabla^2u:\nabla^2v\,dx \geq \lambda_{min}(\hat{\mathcal{C}})\int_\Omega |\nabla^2v|^2 \,dx =  \lambda_{min}(\hat{\mathcal{C}}) \|\nabla^2v\|^2_{L^2(\Omega)}.\]
+Es fehlt also noch zu zeigen, dass $\exists \alpha>0: \alpha \|\nabla^2v\|_{L^2(\Omega)} \geq \|v\|_{H^2(\Omega)}$.\\
+
+Zur Erinnerung, die Norm von $\Hzwei$ ist definiert durch $\|v\|^2_{\Hzwei} = \|v\|_{\Lzwei}^2 + \|\nabla v\|_{\Lzwei}^2 + \|\nabla^2 v\|_{\Lzwei}^2$
+
+Mit der Friedrichs-Ungleichung, siehe Appendix \ref{Hilfsaussagen Appendix} erhalten wir für $v \in H^2_{\Gamma_D}(\Omega)$:
+\begin{align*}
+    \|v\|_{L^2(\Omega)} \leq c_F\|\nabla v\|_{L^2(\Omega)},\\
+    \|\nabla v\|_{L^2(\Omega)} \leq c_F \|\nabla^2 v\|_{L^2(\Omega)},
+\end{align*}
+woraus wir außerdem folgern können, dass
+\begin{align*}
+        \|v\|_{L^2(\Omega)} \leq c_F\|\nabla v\|_{L^2(\Omega)} \leq c_F' \|\nabla^2 v\|_{L^2(\Omega)},
+\end{align*}
+wobei $c_F' := c_F^2$ und somit insgesamt folgt, dass 
+\begin{align*}
+    \|v\|_{\Hzwei} \leq \tilde C \, \|\nabla^2v\|_{\Lzwei},
+\end{align*}
+mit $\tilde C := \sqrt{c_F'^2 + c_F^2 + 1}$.
+Somit haben wir, dass
+\[\hat{a}(v,v) \geq \frac{\lambda_{min}(\CDach)}{\tilde C^2} \|v\|_{\Hzwei},\]
+weswegen $a$ koerziv ist.\\
+\begin{comment}
+\textbf{$\hat{F}$ ist stetig nach Vorraussetzung}\\
+    
+Wir erinnern uns
+\begin{equation}
+    \begin{split}
+        \langle \hat F,v\rangle = \langle F,v\rangle - \int_{\Gamma_s\cup\Gamma_f} \hat M_n\,\partial_n v\,ds + \int_{\Gamma_f} \hat V_n\,v\,ds - \sum_{x\in\mathcal V_{\Gamma,f}} \hat R_x\,v(x),
+    \end{split}
+\end{equation}
+mit
+\begin{align*}
+    \langle F,v\rangle = \int_\Omega f\,v\,dx,\quad \hat V_n = \partial_t\hat M_t+\hat Q-\hat c_n,\quad \hat R_x = \llbracket \hat M_t\rrbracket_x.
+\end{align*}
+und wollen nun die Terme einzeln betrachten:
+\[
+|\langle F,v\rangle| = \Bigg|\int_\Omega f v\, dx \Biggl| \leq \|f\|_{\Lzwei}\|v\|_{\Lzwei} < \infty
+\]
+
+\[
+\Bigg|\int_{\Gamma_s \cup \Gamma_f} \hat{M}_n \partial_nv \,ds \Bigg| \leq \|\hat{M}_n\|_{L^2(\Gamma_s \cup \Gamma_f)}\|\partial_nv\|_{L^2(\Gamma_s \cup \Gamma_f)} \overset{(*)}{\leq} \|\hat{M}_n\|_{L^2(\Gamma_s \cup \Gamma_f)}\|v\|_{\Hzwei} < \infty
+\]
+\[
+\Bigg|\int_{\Gamma_f}\hat{V}_n v \,ds\Bigg| \leq \|\hat{V}_n\|_{L^2(\Gamma_f)}\|v\|_{L^2(\Gamma_f)} \overset{(*)}{\leq} \|\hat{V}_n\|_{L^2(\Gamma_f)}\|v\|_{\Hzwei} < \infty
+\]
+\[
+\Bigg| \sum_{x\in \mathcal{V}_{\Gamma,f}}\llbracket \hat{M}_n \rrbracket_x v(x)\Bigg| \leq \sum_{x\in \mathcal{V}_{\Gamma,f}}|\llbracket \hat{M}_n \rrbracket_x| |v(x)| \overset{(1)}{\leq}  C\bigg(\sum_{x\in \mathcal{V}_{\Gamma,f}}|\llbracket \hat{M}_n \rrbracket_x| \bigg)\|v\|_{\Hzwei} < \infty
+\]
+wobei $(1)$ aufgrund des Einbettungssatz von Sobolevfunktionen gilt, mit $n=k=2$ und $m=0$, siehe Appendix \ref{Einbettungssatz von Sobolev}. Die Ungleichungen, makiert mit $(*)$, sind ein Resultat des Spurenoperators, siehe Theorem 5.6, Kapitel 5.2 in \cite{PDE-Skript} und wir uns erinnern, dass wir eine endliche Menge an Eckpunkten hatten, was für die letzte Ungleichung wichtig ist. Also haben wir gezeigt, dass auch $\hat{F}$ stetig ist.
+\begin{remark}
+    Aufgrund unserer zu Beginn getroffenen Voraussetzungen für Randbedingungen, wären die letzen drei der vier Ungleichungen ohnehin gleich Null. Hier haben wir aber gezeigt, dass der Satz von Lax-Milgram auch für allgemeinere Probleme dieser Art anwendbar ist
+\end{remark}
+
+\end{comment}
+
+Nach dem Satz von Lax-Milgram gilt nun, dass das Biegeproblem eine eindeutige Lösung besitzt und 
+\begin{align}\label{lax-milgram abschätzung}
+    \|u\|_{\Hzwei} \leq c_L \|\hat{F}\|_{(\Hzwei)'}
+\end{align}
+\chapter{Gemischte Variationsformulierung}
+\section{Herleitung der gemischten Variationsformulierung}
+Nachdem wir die schwache Formulierung des Biegeproblems umgeformt haben, wollen wir nun den bereits verwendeten Momententensor in die Variationsformulierung einbauen. Dadurch erhöhen wir zwar die Zahl an Unbekannten von einer auf zwei, können dafür allerdings die höchste auftretende Ableitungsordnung von zwei auf eins verringern.
+
+%Nachdem wir unser Problem auf zwei Teilprobleme aufgeteilt haben wollen wir im Folgenden das erhaltene System an PDEs so umformen, dass wir in der schwachen Formulierung keine zweiten Ableitungen mehr haben, denn dann können wir es mit einer geeigneten Methode lösen. Zudem wollen wir analog zum Satz von Lax-Milgram, den wir zuvor für die Existenz und Eindeutigkeit einer Lösung verwendet haben, nun mit dem Brezzi-Lemma die wohlgestelltheit zeigen.}\\
+
+\subsection{Ausgangspunkt}
+Wir wenden uns wieder dem Biegeproblem aus Kapitel 2 zu:
+\begin{align}\label{Biegeproblem - schwache Form}
+    \int_\Omega \CDach \nabla^2u:\nabla^2v\, dx = \langle\hat{F},v\rangle \quad \forall v \in W.
+\end{align}
+
+Nehmen wir uns wieder den Biegemomenttensor $\mathbf{M}=-\CDach\nabla^2u$ aus dem vorigen Kapitel her, können wir unsere schwache Form (\ref{Biegeproblem - schwache Form}) zu folgendem System umformen:\\
+
+Wir suchen $(\mathbf{M},u) \in (\mathbf{L}^2(\Omega)_{sym}, W)$, sodass
+\begin{equation}\label{gemischte Variationsformulierung}
+    \begin{aligned}
+        &\int_\Omega \mathbf{M}:\nabla^2 v\, dx &&= \langle F,v \rangle &&\quad \forall v \in W,\\
+        &\int \CDach^{-1}\mathbf{M:L} \,dx + \int_\Omega \nabla^2u:\mathbf{L}\,dx &&=0 &&\quad \forall \mathbf{L} \in \mathbf{L}^2(\Omega)_{sym}
+    \end{aligned}
+\end{equation}
+mit $\CDach^{-1}\mathbf{A} = \frac{12(1+\nu)}{Et^3}\bigg(\mathbf{A} + \frac{\nu}{1+\nu}\operatorname{tr}(\mathbf{A)I}_{2\times2}\bigg)$. 
+\subsection{Regularitätsforderung für $u$ abschwächen}
+
+\subsubsection{Der Operator $B$}
+Wir definieren zunächst die Bilinearform aus (\ref{gemischte Variationsformulierung})
+\[b(\lfett,v) = \int_\Omega \nabla^2v:\lfett\,dx\]
+Sei nun $B = \nabla^2: W \rightarrow \lfett^2(\Omega)$, dann erhalten wir
+\[\langle Bv,\lfett\rangle = b(\lfett,v) = \int_\Omega \nabla^2v:\lfett\,dx.\]
+\subsubsection{Die Adjungierte des Operators $B$}
+Um die Ableitungen, wie bereits erwähnt, von unserem $u$ und $v$ zu eliminieren, helfen wir uns mit der Adjungierten von $B$.
+In \cite{JKU_Paper} wird in den Kapiteln 2.3.1 - 2.3.3 die Adjungierte $B^*$ berechnet, der dazugehörige Definitionsbereich $D(B^*)$ definiert, was wir hier kurz anführen möchten:\\
+Für zwei Hilberträume $X,Y$, dem Operator $B: D(B)\subset X \rightarrow Y^*$ und dazugehörigem Definitionsbereich $D(B)$, wobei wir $D(B) \subset X$ dicht vorraussetzen, definieren wir für die Adjungierte $B^*:D(B^*)\subset Y \rightarrow X^*$ den Definitionsbereich 
+\[D(B^*)=\{y \in Y: \exists G \in X^*: \langle Bx,y\rangle = \langle G,x\rangle \quad \forall x \in D(B)\}\] 
+und darauf $B^*$ wie folgt:
+\[
+B^* :
+\begin{cases}
+    D(B^*) \rightarrow X^*,\\
+    y \mapsto B^*y := G.
+\end{cases}
+\]
+wodurch $\langle B^*y,x\rangle$ auf $D(B^*)$ wohldefiniert ist und wir die Gleichheit
+\[\langle Bx,y\rangle = \langle B^*y,x\rangle \quad \forall x \in D(B),y \in D(B^*)\]
+erhalten. Mit der Norm $\|y\|_{D(B^*)} := (\|y\|_Y^2+\|y\|_{X^*}^2)^\frac{1}{2}$ ist $D(B^*)$ ein Hilbertraum.\\
+
+\subsubsection{Wahl der Funktionenräume}
+Da der Operator $B$ eigentlich als $B = \nabla^2: W \rightarrow \lfett^2(\Omega)$ definiert ist, ist es natürlich $D(B):=W$ zu definieren. \\
+Da es unser Ziel ist, die Regularitätsanforderung an die Verschiebung zu reduzieren, also von $H^2(\Omega)$ auf $H^1(\Omega)$ zu kommen, definieren wir $X=Q$, wobei
+\[Q = H^1_{0,\Gamma_c\cup\Gamma_s}(\Omega) = \{v \in H^1(\Omega): v=0 \text{ auf } \Gamma_c \cup \Gamma_s\} \text{ mit der Norm } \|v\|_Q = \|v\|_{H^1(\Omega)}.\]
+$W\subset Q$ ist dicht (siehe dazu \cite{JKU_Paper} Seite 24). Die Herleitung beziehungsweise Argumentation, warum wir $Q$ genauso wählen, wird in \cite{JKU_Paper} Kapitel 2.3.3 genau ausgeführt, lassen wir hier aber weg.\\
+Mit der Definition $X=Q$ erhalten wir nun, dass später $u$ nur noch in $H^1(\Omega)$ gefordert wird, was die zu Beginn des Kapitels definierte Reduktion der Regularität mit sich bringt.
+
+Analog zum Poisson-Problem, wofür der adjungierte Operator zum Gradienten $\nabla$, die negative Divergenz ist, was in \cite{JKU_Paper}, in den Kapiteln 2.3.2 und 2.3.3 hergeleitet wird, ist zu $\nabla^2$, der adjungierte Operator durch $\operatorname{divDiv}$ gegeben.
+
+Also können wir für $B=\nabla^2$ und $D(B)=W$, wobei $X=Q$ und $Y=\mathbf{L}^2(\Omega)$ bleibt, definieren:
+\[B^*:= \operatorname{div Div} \quad \text{ und } \quad D(B^*):=\mathbf{H}(\operatorname{divDiv},\Omega;Q^*)_{sym}\]
+wobei 
+\begin{equation}\label{Definition H_divDiv}
+    \begin{aligned}
+        &\mathbf{H}(\operatorname{divDiv},\Omega;Q^*)_{sym} := \{\lfett \in \lfett^2(\Omega): \exists G \in Q^*: \langle G,v\rangle =
+        \langle \nabla^2v,\lfett\rangle, \forall v \in W\}\\
+        &\quad = \{ \lfett \in \lfett^2(\Omega): \exists G \in Q^*:
+        \quad G: v\rightarrow  \int_\Omega \nabla^2v:\lfett \, dx \text{ ist beschränkt, bezüglich }\|.\|_Q, \forall v\in W \}
+    \end{aligned}
+\end{equation}
+mit Norm $\|v\|_{\operatorname{divDiv};Q^*} = (\|v\|_{\Lzwei}^2+\|v\|_{Q^*}^2)^\frac{1}{2}$ beschränkt\\ 
+\subsubsection{Die neue gemischte Variationsformulierung}
+Hier können wir $G \in Q^*$ interpretieren als $G=\divergenz\Div\lfett$. Dadurch erhalten wir die Form 
+\begin{align}\label{adjungierte nabla^2 - divDiv}
+    \langle \operatorname{divDiv}\lfett,v\rangle = \langle\nabla^2v,\lfett\rangle \quad \forall \lfett \in \mathbf{H}(\operatorname{divDiv,\Omega;Q^*)_{sym}}, v \in W
+, \end{align}
+und weil 
+\[
+\int_\Omega \mathbf{M}:\nabla^2 v\, dx = \langle \mathbf{M},Bv\rangle = \langle\operatorname{divDiv}\mathbf{M},v\rangle
+\]
+ergibt unsere neue gemischte Variationsformulierung:\\
+
+Für $F\in Q^*$, suchen wir $\mathbf{M}\in \mathbf{V}$ und $u \in Q$:
+\begin{equation}\label{gemischte Variationsformulierung - (M,v)}
+    \begin{aligned}
+        &\int \CDach^{-1}\mathbf{M:L} \,dx + \langle \operatorname{divDiv}\lfett,u\rangle &&=0 &&\quad \forall \mathbf{L} \in \vfett\\
+        &\langle \operatorname{divDiv}\mathbf{M},v\rangle &&= -\langle F,v \rangle &&\quad \forall v \in Q,
+    \end{aligned}
+\end{equation}
+wobei wir beachten müssen, dass nun $F\in Q^*$, anstatt wie in (\ref{gemischte Variationsformulierung}) $F\in W^*$ und wir als
+Funktionenräume $\vfett := \hdivDiv$ mit $\|\lfett \|_\vfett := \|\lfett\|_{\divergenz\Div; Q^*}$ und $Q := H^1_{0;\Gamma_c \cup \Gamma_s}(\Omega)$ mit $\|v\|_Q := \|v\|_{H^1(\Omega)}$ definieren.
+
+Damit haben wir eine Variationsformulierung hergeleitet, die für unser $u$ nur noch erste Ableitungen enthält und die Vorraussetzungen des Brezzi-Lemmas erfüllt, was wir im nächsten Abschnitt zeigen werden. Außerdem bildet es die Grundlage für die HHJ-Methode - mehr dazu in Abschnitt \ref{Kap: HHJ-Methode erklärt}
+
+\begin{comment}
+Funktionenräume wie folgt definieren wollen:
+\begin{align*}
+    \vfett &:= \hdivDiv &\quad \text{ mit } \|\lfett \|_\vfett &:= \|\lfett\|_{\divergenz\Div; Q^*}\\
+    Q &:= H^1_{0;\Gamma_c \cup \Gamma_s}(\Omega) &\quad \text{ mit } \|v\|_Q &:= \|v\|_{H^1(\Omega)}
+\end{align*}
+\end{comment}
+\section{Existenz und Eindeutigkeit}
+\label{Existenz und Eindeutigkeit nach Brezzi}
+Da wir in der gemischten Variationsformulierung $(\mathbf{M},u)$ suchen, können wir den Satz von Lax-Milgram \ref{Lax-Milgram} für die Existenz und Eindeutigkeit einer Lösung, nicht mehr anwenden. Wir wollen stattdessen das Brezzi-Lemma verwenden.\\
+
+\begin{lemma}[Brezzi-Lemma]
+Seien $V$ und $Q$ Hilberträume. Weiters seien $ a:V\times V\rightarrow \mathbb{R} \text{ und }
+b:V\times Q\rightarrow \mathbb{R}$ stetige Bilinearformen. Wenn für das gemischte Problem:
+
+Wir suchen $(\mathbf{M},u)\in V\times Q$, sodass
+\begin{align}
+a(\mathbf{M},\mathbf{L})+b(\mathbf{L},u) &= \langle F_L,\lfett\rangle
+&&\forall \lfett\in V,\\
+b(\mathbf{M},v) &= \langle F_v,v\rangle
+&&\forall v\in Q.
+\end{align}
+
+folgende Bedingungen gelten
+
+\begin{enumerate}
+    \item $a$ ist koerziv auf dem Kern von $b$, d.h. es existiert ein $\alpha>0$ mit
+    \[
+    a(\lfett,\lfett)\geq \alpha \|\lfett\|_V^2
+    \qquad
+    \forall \lfett\in \ker(B),
+    \]
+    wobei
+    \[
+    \ker(B)=\{\lfett\in V:\ b(\lfett,v)=0\quad \forall v\in Q\}.
+    \]
+
+    \item $b$ erfüllt die Inf-Sup-Bedingung, d.h. es existiert ein $\beta>0$ mit
+    \[
+    \inf_{v\in Q}
+    \sup_{\lfett\in V}
+    \frac{b(\lfett,v)}{\|\lfett\|_V\|v\|_Q}
+    \geq \beta,
+    \]
+\end{enumerate}
+
+dann existiert genau eine Lösung $(\mathbf{M},u)\in V\times Q$ und diese hängt stetig von den Daten $F$ und $G$ ab, wobei diese Eigenschaft auch als 'wohlgestellt' bezeichnet wird.
+\end{lemma}
+
+Für einen einfach skizzierten Beweis, siehe \cite{NumPDE_dirk}: Kapitel 6 beziehungsweise für einen ausführlichen vollständigen Beweis siehe \cite{Brezzi_Paper}: Kapitel 4.2.3.
+\subsubsection{Vorraussetzungen des Brezzi-Lemmas nachrechnen}
+
+Um zu zeigen, dass unser Problem die Bedingugnen des Brezzi-Lemmas erfüllt, brauchen wir noch folgendes Lemma:\\
+
+\begin{lemma}\label{Lemma: gemischte Form impliziert (M,v)-gemischte Form}
+    Sei $u \in W$ die Lösung für (\ref{gemischte Variationsformulierung}), mit $F \in Q^*$, dann folgt, dass $\mfett=-\CDach\nabla^2u \in \vfett$ und $(\mfett,v)$ das Problem (\ref{gemischte Variationsformulierung - (M,v)}) löst.
+\end{lemma}
+\begin{proof}
+    Sei $u \in W$, die Lösung von (\ref{gemischte Variationsformulierung}) mit $F \in Q^*$, dann folgt, dass $\nabla^2v \in \lfett^2(\Omega)_{sym}$ und somit auch $\mfett = -\CDach\nabla^2u \in \lfett^2(\Omega)_{sym}$.
+    Außerdem folgt
+    \[\langle \nabla^2v,\mfett\rangle = \int_\Omega \mfett:\nabla^2v\,dx \overset{Def. \, M}{=} -\int_\Omega -\CDach\nabla^2u:\nabla^2v\, dx = \langle-F,v\rangle \quad \forall v\in W.\]
+    Nach Definition (\ref{Definition H_divDiv}) folgt damit, dass $\mfett \in \vfett$ mit $\divergenz\Div\mfett = -F \in Q^*$, was wiederrum impliziert, dass die zweite Gleichung von (\ref{gemischte Variationsformulierung - (M,v)}) erfüllt ist.
+    Da $u \in W$, erhalten wir aus (\ref{adjungierte nabla^2 - divDiv}):
+    \[\langle \divergenz\Div \lfett,u\rangle = \langle \nabla^2u,\lfett\rangle = \int_\Omega \lfett:\nabla^2u\, dx = - \int_\Omega \lfett:\CDach^{-1}\mfett\, dx \quad \forall \lfett \in \vfett\]
+    wodurch auch gezeigt ist, dass die erste Zeile der Gleichung (\ref{gemischte Variationsformulierung - (M,v)} erfüllt ist.
+\end{proof}
+
+Für die Anwendung des Brezzi-Lemmas sei
+\[a(\lfett,\mfett) := \int_\Omega \CDach^{-1}\mfett:\lfett \, dx \quad \text{ und } \quad b(\lfett,v)=\langle\operatorname{divDiv}\lfett,v\rangle\]
+und wie oben
+\[Q := H^1_{0,\Gamma_c\cup\Gamma_s}(\Omega) \text{ und } \mathbf{V}:=\mathbf{H}(\operatorname{divDiv},\Omega;Q^*)_{sym}\]
+mit den jeweiligen bereits definierten Normen.
+Außerdem sei
+\[\|a\| = 1/\lambda_{min}\CDach,\, \|b\| = 1, \,\alpha = 1/\lambda_{max}(\CDach) \,\text{ und } \beta = 1/\sqrt{(1+c)}\]
+wobei $c=c'\lambda_{max}\CDach/\lambda_{min}\CDach$ mit $c'$ die Konstante, sodass $c_L = c'/\lambda_{min}(\CDach)$, siehe (\ref{lax-milgram abschätzung}).
+
+Im Folgenden wollen wir die geforderten Bedinungen im Brezzi-Lemma nachweisen:\\
+\begin{enumerate}
+    \item \textbf{$a$ ist beschränkt und somit stetig}\\
+    zz. $ \exists \|a\| >0: |a(\mfett,\lfett)| \leq \|a\| \|\mfett\|_\vfett \|\lfett\|_\vfett \quad \forall \mfett, \lfett \in \vfett$
+    Sei $\mfett,\lfett \in \mathbf{H}(\divergenz\Div, \Omega;Q^*)_{sym}$, dann folgt 
+    \[|(\CDach^{-1}\mfett,\lfett)|\overset{(\ref{Schwarzsche Ungleichung})}{\leq} (1/\lambda_{min})(\CDach) \|\mfett\|_{\Lzwei} \|\lfett\|_{\Lzwei} \leq (1/\lambda_{min}(\CDach) \|\mfett\|_{divDiv; Q^*}\|\lfett\|_{divDiv; Q^*}\]
+    womit $a$ beschränkt, also stetig ist.\\
+    \item \textbf{$b$ ist beschränkt und somit stetig}\\
+    zz. $\exists \|b\|>0: |b(\lfett,v)| \leq \|b\| \|\lfett\|_{\hdivDiv}\|v\|_Q \quad \forall \lfett \in \hdivDiv, v \in Q$\\
+    Für $\lfett \in \hdivDiv$ und $v\in Q$ gilt
+    \[ |\langle\divergenz\Div \lfett,v\rangle| \overset{(\ref{Schwarzsche Ungleichung})}{\leq} \|\divergenz\Div \lfett\|_{Q^*}\|v\|_Q \leq \|\lfett\|_{\divergenz\Div;Q^*} \|v\|_Q,\]
+    wodurch auch $b$, für $\|b\|=1$ beschränkt, also stetig ist.\\
+
+    \item  \textbf{$a$ ist auf dem Kern von $B$ koerziv}\\
+    zz. $\exists \alpha >0: a(\lfett,\lfett) \geq \alpha \|\lfett\|_\vfett^2 \quad \forall \lfett \in \operatorname{ker}(B)$, wobei $\operatorname{ker}(B)=\{\lfett \in \vfett: b(\lfett,v)=0 \forall v \in Q\}$\\ 
+    Aus der Ungleichung
+    \[(\CDach^{-1}\lfett,\lfett) \geq 1/\lambda_{max}(\CDach) \|\lfett\|_{\Lzwei}^2 = 1/\lambda_{max}(\CDach) \|\lfett\|_{\operatorname{divDiv};Q^*}^2,\]
+    folgt die Koerzivität von $a$ auf $\operatorname{Ker}(B)$.
+\end{enumerate}
+\begin{remark}
+    Der Kern von $B$ wird hier bezüglich der Funktion $B: \vfett \rightarrow Q^*, (B\lfett)(v) := b(\lfett,v)$ verstanden.\\
+    Außerdem sei daran erinnert, dass die Eigenwerte einer Matrix $A^{-1}$, die Kehrwerte der Eigenwerte von $A$ sind, weswegen diese Abschätzung gilt. $0$ kann dabei kein Eigenwert von $A$ sein, da die Matrix ansonsten nicht invertierbar wäre.
+\end{remark}
+
+\begin{enumerate}
+\setcounter{enumi}{3} % weiter bei Punkt 4
+    \item \textbf{$b$ erfüllt die inf-sup Bedingung}\\
+    zz. $\exists \beta>0: \operatorname{inf}_{0 \neq v \in Q} sup_{ 0\neq \lfett \in \vfett} \frac{b(\lfett,v)}{\|\lfett\|_\vfett \|v\|_Q} \geq \beta$\\
+    Für ein beliebiges $v \in Q$, sei $u_v$ die nach dem Lemma von Lax-Milgram eindeutige Lösung von (\ref{gemischte Variationsformulierung}) mit $\langle F_v,-\rangle = -(v,.)_Q \in Q^*$
+    Nach Lemma \ref{Lemma: gemischte Form impliziert (M,v)-gemischte Form} ist $\mfett_v = -\CDach\nabla^2u_v \in \vfett$ und $(\mfett_v,u_v)$ löst das gemischte Problem (\ref{gemischte Variationsformulierung - (M,v)}). Aus der zweiten Zeile von (\ref{gemischte Variationsformulierung - (M,v)}) erhalten wir, dass 
+    \[ \langle\divergenz\Div \mfett,v\rangle = (v,v)_Q = \|v\|_Q^2 \]
+    außerdem
+    \[\|\divergenz\Div\mfett_v\|_{Q^*} = \operatorname{sup}_{q \in Q} \frac{\langle\divergenz\Div\mfett_v,q\rangle}{\|q\|_Q} = \operatorname{sup}_{q \in Q} \frac{(v,q)_Q}{\|q\|_Q} \overset{(\ref{Schwarzsche Ungleichung})}{=} \|v\|_Q. \]
+    Damit erhalten wir die Ungleichung
+    \begin{equation}
+        \begin{aligned}
+             &\| \mfett_v\|_{\Lzwei}^2 = \|\CDach\nabla^2u_v\|_{\Lzwei}^2 \leq \lambda_{max}(\CDach) (\CDach\nabla^2u_v,\nabla^2u_v)\\
+             &\quad = \lambda_{max}(\CDach) \langle F_v,u\rangle \leq \lambda_{max}(\CDach)\|F_v\|_{W^*}\|u_v\|_W \leq c'\lambda_{max}(\CDach) /\lambda_{min}(\CDach) \|F_v\|_{W^*}^2  \leq c \|v\|_{W^*},
+        \end{aligned}
+    \end{equation}
+    mit $c := c'\lambda_{max}(\CDach)/\lambda_{min}(\CDach)$.
+
+    Daraus erhalten wir wiederum
+    \[\|M_v\|_{\divergenz\Div;Q^*}^2 = \|M_v\|_{\Lzwei}^2 + \|\divergenz\Div\mfett_v\|_{Q^*}^2 \leq (1+c)\|v\|_Q^2.\]
+    Womit wir die inf-sup Bedingung erhalten
+    \[\operatorname{sup}_{0\neq \lfett \in \vfett} \frac{\langle\divergenz\Div \lfett,v\rangle}{\|\lfett\|_{\divergenz\Div; Q^*}\|v\|_Q} \geq \frac{\langle\divergenz\Div\mfett_v,v\rangle}{\|\mfett_v\|_{\divergenz\Div; Q^*}\|v\|_Q} \geq \frac{1}{\sqrt{(1+c)}}.\]
+\end{enumerate}
+
+Da nun gezeigt ist, dass alle Voraussetzungen für das Brezzi-Lemma erfüllt sind, erhalten wir, dass unser gemischtes Problem (\ref{gemischte Variationsformulierung - (M,v)}) wohlgestellt ist, also eine eindeutige Lösung für (\ref{gemischte Variationsformulierung - (M,v)}) existiert, die stetig abhängig von $F_L$ und $F_v$ ist, wobei $F_L=0$.
+
+\chapter{Numerisches Lösen der gemischten Variationsformulierung}
+Da der Schwerpunkt dieser Arbeit auf der Theorie partieller Differentialgleichungen liegt, wollen wir uns in diesem Abschnitt eher kurz halten und die numerischen Hintergründe eher vernachlässigen. 
+
+Um unser Plattenproblem zu lösen, werden wir die Finite Elemente Methode verwenden. Dabei müssen wir unser Gebiet $\Omega$ in endlich viele, kleine Teilgebiete aufteilen beziehungsweise 'diskritisieren' und uns dafür passende Basisfunktionen konstruieren, wofür wir die Hellan-Hermann-Johnson Methode anwenden werden.\\
+Im Folgenden werden wir beide Methoden kurz erklären und anschließend die Konvergenz der numerischen Lösung gegen die analytische Lösung zeigen, welche nach dem Brezzi-Lemma (Abschnitt \ref{Existenz und Eindeutigkeit nach Brezzi}) exisitert.
+
+
+\section{Finite Elemente Methode}\label{kapitel: FEM}
+\textit{"It is the most
+powerful and most popular numerical method for boundary value problems in more than one dimension."\footnote{ \cite{numodes_nannen}: S. 105}}
+\\
+Die Finite-Elemente-Methode (FEM) ist ein numerisches Berechnungsverfahren zur Lösung von PDEs.\\
+\\
+Der Name "finite Elemente" bezieht sich dabei auf die Unterteilung des Berechnungsgebietes, meist bezeichnet mit $\Omega$, in endlich viele Teile, meist Dreiecke beziehungsweise Tetraeder.\footnote{\textit{Alle Abbildungen in dieser Arbeit sind eigene Darstellungen, sofern nicht anders angegeben.}}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\linewidth]{mesh_Gebiet_zoom.png}
+    \caption{Diskretisiertes Gebiet}
+    \label{fig:Diskretisiertes Gebiet}
+\end{figure}
+\\
+\\
+Mithilfe von passenden Ansatz- beziehungsweise Basisfunktionen sucht man anschließend eine Lösung im endlich dimensionalen Raum, welche eine Annäherung der Lösung des analytischen Problems ist, wobei die Genauigkeit von der Größe der gewählten Elemente, in unserem Fall Dreiecken, abhängt.\footnote{\cite{IPH}} Wir wollen uns hier zwei Beispiele von sehr elementaren Basisfunktionen ansehen, um ein besseres Verständnis der Methode zu erhalten.
+\begin{figure}[h]
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{linHutfunktion_zoom.png}
+        \caption{lineare Basisfkt.}
+        \label{fig:lineare Basisfkt.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{quadHutfunktion_zoom.png}
+        \caption{quadratische Basisfkt.}
+        \label{fig:quadratische Basisfkt.}
+    \end{minipage}
+\end{figure}
+
+\subsection{Vorgehensweise in der FEM}
+\label{subsec: Vorgehensweise in der FEM}
+
+\textbf{Problemstellung:}
+In der FEM möchte man im Allgemeinen eine PDE mit gegebenen Randbedingungen lösen, wobei wir dabei immer mit der schwachen Formulierung der PDE arbeiten und für welche wir eine schwache Lösung \textit{u} finden wollen. Die Begriffe 'schwache Formulierung' und 'schwache Lösung' meinen die gängigen Definitionen in der Theorie der PDEs und können zum Beispiel in \cite{PDE-Skript} auf Seite 71 nachgelesen werden.
+
+Im Allgemeinen erhalten wir also folgende Problemstellung:
+\[
+\text{suchen } u \in H^1(\Omega):\hspace{0.5cm} A(u,v) = f(v) \hspace{1cm}\forall v \in H^1(\Omega)
+\]
+Wie bereits in Kapitel \ref{kapitel: FEM} erwähnt, konstruieren wir uns anschließend einen endlichdimensionalen Teilraum von $H^1(\Omega)$:
+
+\[ 
+V_h  \subset H^1(\Omega) \text{ mit }dimV_h = N < \infty,
+\]
+wodurch wir die schwache Form: 
+\[
+\text{suchen } u_h \in V_h:\hspace{0.5cm} A(u_h,v_h) = f(v) \hspace{1cm}\forall v_h \in V_h,
+\]
+erhalten. Da in endlich-dimensionalen Räumen immer eine Basis $B = (b_1(x),b_2(x),...,b_N(x))$ existiert, also:
+\[
+V_h = span[b_1,b_2,...b_N],
+\]
+können wir folgern, dass aufgrund der Basiseigenschaft $u_h$ von folgender Form sein muss:
+\[
+u_h = \sum_{i=1}^{N}u_i b_i(x) 
+\]
+wobei wir $u:= (u_1,...,u_N) \in \mathbb{R}^N$ für später definieren wollen.
+Aufgrund der Bilinearität beziehungsweise Linearität der Abbildungen $A$ und $f$ reicht es nur noch die Basisfunktionen $b_1(x),...b_N(x)$ als Testfunktionen zu betrachten. Dadurch erhalten wir als neue Problemstellung:
+\[
+\text{Wir suchen ein } u \in \mathbb{R}^N:\hspace{0.5cm} \sum_{i=1}^{N} A(b_i,b_j) u_i = f(b_j) \hspace{1cm}\forall j=1,...N
+\]
+Und da wir zu Beginn spezifische, uns bekannte Basisfunktionen gewählt haben, können wir $A(b_i,b_j)$ und $f(b_j)$ für alle \textit{i, j} berechnen, woraus wir eine Matrix $\mathbf{A}$ und einen Vektor $\mathbf{f}$ erhalten:
+\[
+\mathbf{A} = (A(b_i,b_j))_{i,j=1}^N \text{ und } \mathbf{f} = (f(b_j))_{j=1}^N,
+\]
+was uns zu dem linearen Gleichungssystem:\[
+\text{suchen } u \in \mathbb{R}^N:\hspace{0.5cm} \afett^T\mathbf{u}=\mathbf{f}\hspace{1cm}\forall j=1,...N,
+\]
+führt. Der Lösungsvektor \textbf{u} dieses Gleichungssystems liefert uns nun die Koeffizienten für unser $u_h$, wodurch wir eine explizite  Näherungslösung für $u$ berechnet haben.\footnote{\cite{NGSolve_fem}, \cite{femscript},\cite{numodes_nannen}: S.105-109}
+
+
+\section{Diskretisierung mit der Hellan-Hermann-Johnson Methode}\label{Kap: HHJ-Methode erklärt}
+Die Hellan-Hermann-Johnson Methode (HHJ) (siehe \cite{hhjMethod} S. 2-3) ist eine gemischte Finite-Elemente Methode zum Lösen von Plattengleichungen vierter Ordnung. Für die Verbiegung verwendet es herkömmliche Lagrange-Finite-Elemente und für den Momententensor komplexere Finite-Elemente. 
+
+\subsection{Unsere gemischte Variationsformulierung als Ausgangspunkt}
+Wir erinnern uns noch einmal an unser zuvor hergeleitetes Problem \ref{gemischte Variationsformulierung - (M,v)}.
+
+\begin{equation}\label{gemischte Variationsformulierung - kap: hhj}
+    \begin{aligned}
+        &\int \CDach^{-1}\mathbf{M:L} \,dx + \langle \operatorname{divDiv}\lfett,u\rangle &&=0 &&\quad \forall \mathbf{L} \in \vfett\\
+        &\langle \operatorname{divDiv}\mathbf{M},v\rangle &&= -\langle F,v \rangle &&\quad \forall v \in Q,
+    \end{aligned}
+\end{equation}
+mit $F \in Q^*$. Unsere Funktionenräume dafür waren definiert als 
+\begin{align*}
+    &\vfett := \hdivDiv := \{\lfett \in \lfett^2(\Omega): \\
+    &\quad G: v\rightarrow \langle \nabla^2v,\lfett\rangle = \int_\Omega \nabla^2v:\lfett \, dx \text{ ist beschränkt bezüglich }\|.\|_Q, \forall v\in W \}
+\end{align*}
+mit $\|\lfett \|_\vfett := \|\lfett\|_{\divergenz\Div; Q^*}$ und 
+\[Q := H^1_{0;\Gamma_c \cup \Gamma_s}(\Omega)\]
+mit $\|v\|_Q := \|v\|_{H^1(\Omega)}$.
+Die Bilinearform $\langle \divergenz \Div \tfett,v\rangle$ ist nach Kapitel 3 über die Eigenschaft als Adjungierte definiert
+$\langle \divergenz \Div \tfett,v\rangle= \int_\Omega \nabla^2v:\tfett \, dx$
+
+
+\subsection{Herleitung der HHJ-Form}
+
+Der entscheidende Punkt ist nun die auftretenden Ausdrücke so umzuformen, dass man die Finite-Elemente Methode darauf anwenden kann.
+
+Wir wollen im Folgenden annehmen, dass $\Gamma = \Gamma_c$, somit gilt $\Gamma_s=\emptyset = \Gamma_f$.
+Sei $\mathcal{T}_h= (T)_{T \in \mathcal{T}}$ eine beliebige aber feste Aufteilung unseren Gebietes $\Omega$ in endlich viele Dreiecke.
+\[
+\Omega = \dot{\bigcup}_{T \in \mathcal{T}}T
+% \cup \bigcup_{T \in \mathcal{T}}\partial T.
+\]
+Betrachten wir nun die zweite Gleichung von (\ref{gemischte Variationsformulierung - kap: hhj}) auf einem beliebigen $T\in \Tau$
+\subsubsection{Partiell Integrieren über $T$}\\
+
+\begin{equation}
+    \begin{aligned}
+            \langle \divergenz\Div \sfett,v\rangle_T = \int_T \nabla^2 v_h : \sfett \,dx = -\int_T \Div \sfett \cdot \nabla v_h \, dx + \int_{\partial T} (\sfett \nfett)\cdot \nabla v_h \, ds,
+    \end{aligned}
+\end{equation}
+\subsubsection{Randintegral aufspalten}
+Da $\nabla v_h = (\partial_n v_h)\nfett + (\partial_t v_h)\mathbf{t}$, gilt für das Randintegral
+\[ (\sfett \nfett)\cdot \nabla v_h = \sigma_{nn}\partial_n v_h + \sigma_{nt} \partial_t v_h.\]
+Durch Einsetzen erhalten wir
+\begin{equation}\label{Equ: Gauß mit grad v aufgespalten (4.2.46)}
+    \begin{aligned}
+        \langle \divergenz\Div\sfett,v\rangle_T   = \int_T \nabla^2 v_h : \sfett \, dx = -\int_T \Div \sfett \cdot \nabla v_h \, dx + \int_{\partial T} \sigma_{nn} \partial_n v_h \, dx + \int_{\partial T} \sigma_{nt}\partial_t v_h \, ds.
+    \end{aligned}
+\end{equation}
+
+\subsection{Diskretisierung für unsere HHJ-Formulierung}
+
+Für $Q$ wählen wir als endlich dimensionalen Unterraum
+\[
+W_h = \{ v \in H^1_{0,\Gamma_c\cup\Gamma_s}(\Omega): v|_T \in \Pi_{k+1}(T) \, \forall T \in \mathcal{T}\}
+\]
+und für $\vfett$ wählen wir
+\[
+\vfett_h = \{\sigma \in \lfett^2(\Omega;\mathbb{S}): \sigma|_T \in \Pi_k(T;\mathbb{R}_{sym}^{2\times 2})\,\, \forall T\in \mathcal{T}, \sigma_{nn} \text{ stetig}\},
+\]
+Hier müssen wir die Stetigkeit von $\sigma_{nn}$ extra fordern, wobei wir damit meinen, dass auf jeder Kante für die zwei jeweils angrenzenden Dreiecke $T_1,T_2$ 
+\[\nfett^T (\sfett|_{T_1})\nfett = \nfett^T (\sfett|_{T_2})\nfett\]
+gilt. 
+Diese Eigenschaft haben wir in $\vfett$ bereits durch die Definition gegeben. Wir erinnern uns dafür an die Definition von $D(B^*)$, wofür für alle $\lfett \in \vfett$ ein bestimmtes $G \in Q^*$ existieren muss und die anschließende Gleichheit $G = \divergenz\Div \lfett$, woraus folgt, dass $\lfett_{nn}$ stetig ist.\\
+
+\subsection{Diskretisierung Variationsformulierung}
+Mit unseren endlich dimensionalen Räumen erhalten wir:
+Wir suchen $\mfett \in \vfett_h$ und $u \in W_h$
+\begin{equation}\label{diskrete gemischte Variationsformulierung - (sigma,v)}
+    \begin{aligned}
+        &\int \CDach^{-1}\sfett:\tfett \,dx + \langle \operatorname{divDiv}\tfett,u\rangle &&=0 &&\quad \forall \tfett \in \vfett_h\\
+        &\langle \operatorname{divDiv}\sfett,v\rangle &&= -\langle F,v \rangle &&\quad \forall v \in W_h.
+    \end{aligned}
+\end{equation}
+Summieren wir nun über $T\in \Tau$ in (\ref{Equ: Gauß mit grad v aufgespalten (4.2.46)}) erhalten wir
+
+\begin{equation}
+    \begin{aligned}
+        &\langle \divergenz\Div \sfett,v\rangle_\Omega\\
+        &\overset{(\footnote{(\ref{adjungierte nabla^2 - divDiv})})}{=} \int_\Omega \nabla^2v : \sfett \, dx\\ 
+        &\overset{(\footnote{(\ref{Equ: Gauß mit grad v aufgespalten (4.2.46)})})}{=} - \sum_{T \in \mathcal{T}}\int_T \Div \sfett \cdot \nabla v \, dx + \sum_{T \in \Tau} \int_{\partial T} \sigma_{nn} \partial_n v\, ds + \sum_{T\in \Tau} \int_{\partial T} \sigma_{nt}\partial_t v \, ds\\
+    \end{aligned}
+\end{equation}
+
+Da $v \in W_h$ auf den Dreiecken ein Polynom ist, ist $\partial_t v$ entlang der Kanten stetig. Und weil die zwei Normalvektoren einer Kante bis auf das Vorzeichen gleich sind, heben sich die Summanden auf den Innenkanten auf.
+Auf $\Gamma_c$ gilt ohnehin $v=0$, wodurch auch der Term am Rand verschwindet.
+Wir erhalten also
+\begin{equation}
+    \begin{aligned}
+        \langle \divergenz\Div \sfett,v_h\rangle_\Omega = \int_\Omega \nabla^2v : \sfett \, dx = - \sum_{T \in \mathcal{T}}\int_T \Div \sfett \cdot \nabla v \, dx + \sum_{T \in \Tau} \int_{\partial T} \sigma_{nn} \partial_n v\, ds
+    \end{aligned}
+\end{equation}
+
+\begin{comment}
+
+\begin{equation}
+    \begin{aligned}
+        &\overset{(\footnote{Bem. \ref{Bem: sigma_nn stetig}, \ref{Bem: integral entlang kanten auf sigma_nt ist null}})}{=}-\sum_{T \in \Tau} \int_\Omega \Div \sfett \cdot \nabla v_h \, dx + \sum_{E \in \mathcal{E}_h} \int_E \sigma_{nn} \llbracket\partial_n v_h\rrbracket\, ds\\
+        &\overset{(\footnote{(\ref{Equ: Gauß mit grad v aufgespalten (4.2.46)}})}{=} -\sum_{T \in \Tau}\int_T \sfett:\nabla^2v_h\, dx + \sum_{E \in \mathcal{E}_h} \int_E \sigma_{nn}\llbracket\partial_n v_h\rrbracket\, ds.
+    \end{aligned}
+\end{equation}
+
+
+Betrachten wir die zweite Gleichung auf einem Dreieck $T\in \mathcal{T}$, dann erhalten wir, mit $\nabla v= (\partial_n v)\mathbf{n}+(\partial_tv)\mathbf{t}$, wodurch gilt, dass
+\[
+\langle \sigma n,\nabla v\rangle_{\partial T} = \langle n^T\sigma n,\partial_n v\rangle_{\partial T} + \langle t^T\sigma n,\partial_t v\rangle_{\partial T},
+\]
+
+\begin{equation}
+    \begin{aligned}
+        &\langle F,v\rangle_T=(\operatorname{divDiv}\sigma,v)_T
+        = -(\operatorname{Div}\sigma,\nabla v)_T + \langle \operatorname{Div}\sigma\cdot n,v\rangle_{\partial T}\\
+        &\quad= (\sigma,\nabla^2v)_T - \langle \sigma n,\nabla v\rangle_{\partial T} + \langle \operatorname{Div}\sigma\cdot n,v\rangle_{\partial T}\\
+        &\qquad = (\sigma,\nabla^2v)_T - \langle n^T\sigma n,\partial_n v\rangle_{\partial T} - \langle t^T\sigma n,\partial_t v\rangle_{\partial T} + \langle \operatorname{Div}\sigma\cdot n,v\rangle_{\partial T}.
+    \end{aligned}
+\end{equation}
+
+\begin{equation}
+    \begin{aligned}
+        &\langle F,v\rangle_T = \langle\operatorname{divDiv}\sfett,v\rangle_T = -\langle \Div\sfett,\nabla v\rangle_T\\
+        &\quad \overset{S. v. Gauß}{=} \langle \sfett,\nabla^2v\rangle_T - ( \sfett\nfett,\nabla v)_{\partial T}\\
+        &\qquad = \langle \sfett,\nabla^2v\rangle_T - (\nfett^T\sfett\nfett,\partial_n v)_{\partial T} - (\mathbf{t}^T\sfett\mathbf{n},\partial_t v)_{\partial T}
+    \end{aligned}
+\end{equation}
+
+Da $v \in W_h$, auf den Dreiecken ein Polynom ist und es somit entlang der Kanten stetig ist, außerdem die zwei Normalvektoren einer Kante bis auf das Vorzeichen gleich sind, kürzen sich die Terme $(\mathbf{t}^T\mfett\nfett,\partial_tv)_{\partial T}$ gegenseitig weg.\\
+
+
+\begin{remark}\label{Bem: sigma_nn stetig}
+    Durch das Summieren über $T \in \Tau$ erhalten wir aufgrund der Stetigkeit von $\sigma_{nn}$
+    \begin{align}
+        \sum_{T \in \Tau} \int_\Omega \sigma_{nn} \partial_n v_h \, dx = \sum_{E \in \mathcal{E}_h} \int_E \sigma_{nn} \llbracket \partial_n v_h\rrbracket \, ds
+    \end{align}
+    wobei $\llbracket f \rrbracket$ den Sprung von $f$ über eine Gitterkante $E$ meint: \\
+    Für innere Kanten $E$, mit $T_1$ und $T_2$, als die beiden angrenzenden Dreiecke, bezeichnet $\llbracket \partial_nv \rrbracket:= \nfett_1 \nabla v|_{T_1} + \nfett_2\nabla v|_{T_2}$ und für Randkanten ist $\llbracket \partial_nv\rrbracket := \partial_nv|_E$.
+\end{remark}\\
+\end{comment}
+
+
+
+Damit definieren wir uns nun die Bilinearform
+\[ 
+b_h(\tfett,v) := -\sum_{T\in \Tau} \int_T \nabla^2v : \tfett \, dx + \sum_{T \in \Tau}\int_{\partial T} \tfett_{nn}\partial_n v \, ds
+ \quad \forall \tfett \in \vfett_h, v \in W_h
+\]
+
+wobei $b_h(\sfett,v) = -\langle F,v\rangle$ für alle $v \in W_h$ gilt.
+Außerdem definieren wir als zweite Bilinearform 
+\[
+a(\tfett,\sfett) = (\CDach^{-1}\tfett,\sfett) \quad \forall \tfett,\sfett \in \vfett_h \quad\text{ wobei } \CDach^{-1}\boldsymbol{\eta} = \frac{12(1+\nu)}{Et^3}\bigg(\boldsymbol{\eta} + \frac{\nu}{1+\nu}\operatorname{tr}(\boldsymbol{\eta})\mathbf{I}_{2\times2}\bigg).
+\]
+Damit erhalten wir $a(\sfett,\tfett)+b_h(\tfett,\omega_h)=0$ für alle $\tfett \in \vfett_h$, was uns zur HHJ-Methode führt, die $\sfett_h \in \vfett_h$ und $w_h \in W_h$ sucht, sodass\footnote{\cite{hhjMethod} S. 2-4}
+\begin{equation}\label{HHJ-Formulierung}
+    \begin{aligned}
+        a(\sfett_h,\tfett) + b_h(\tfett,w_h) &= 0 \quad &\forall \tfett \in \vfett_h\\
+        b_h(\sfett_h,v) &= -\langle f,v\rangle \quad &\forall v \in W_h
+    \end{aligned}
+\end{equation}
+
+Für den Konvergenzbeweis wollen wir hier auf das Theorem 5.3 in \cite{hhjMethod} Kapitel 5, verweisen. Dieses besagt, dass für die Lösungen $\boldsymbol{\sigma}\in \vfett$ und $w \in W$ von (\ref{HHJ-Formulierung}) auf ganz $\Omega$ und $\boldsymbol{\sigma}_h \in \vfett_h$ beziehungsweise $w_h \in W_h$ Lösungen von (\ref{HHJ-Formulierung}), folgende a-priori Abschätzung gilt:
+\begin{equation}
+    \|\boldsymbol{\sigma}-\boldsymbol{\sigma}_h\|_{L^2(\Omega)} + \|\nabla(w-w_h)\|_{\Lzwei}\leq C h^{min(k+2,t-1)-2/p}
+\end{equation}
+wobei $k\geq 0$, den Grad der Polynome von $\vfett_h$ und $W_h$ bestimmt und $C$ abhängig ist von $f$, dem Gebiet $\Omega$ und der Regularität des Mesh.\\
+Wichtig ist hierbei, die zusätzliche Regularitätsannahme $w \in W^{t,p}(\Omega) \text{ und } \boldsymbol{\sigma} \in W^{t-2,p}(\Omega), t\geq 3, 3/2 < p\leq 2$
+        
+Das bedeutet, falls die exakte Lösung hinreichend regulär ist, erhalten wir mit Theorem 5.3 aus \cite{hhjMethode} die entsprechende Konvergenzordnung.
+
+\section{Umsetzung der HHJ-Methode}
+Da wir nun mit der HHJ-Methode eine stabile Finite-Elemente-Diskretisierung unserer gemischten Variationsformulierung erarbeitet haben, und wir für hinreichend glatte Lösungen auch die Konvergenz festellen konnten, haben wir alle theoretischen Werkzeuge, um die Lösung der Kirchhoff-Love Plattengleichung numerisch zu berechnen.\\
+In folgendem Abschnitt werden wir kurz auf die Umsetzung der HHJ-Methode in NGSolve eingehen und die Konvergenz mittels Experimenten bekräftigen.
+
+Der Code besteht aus mehreren Abschnitten. Im ersten Teil wird die Geometrie, also unser $\Omega$ inklusive dessen Randbedingungen, definiert und in Dreiecke aufgeteilt beziehungsweise 'gemesht'.
+\begin{lstlisting}[style=python]
+    shape = MoveTo(0,0).Rectangle(l,b).Face()
+    shape.edges.name="dirichlet"
+    geo = OCCGeometry(shape,dim=2)
+
+    mesh = Mesh(geo.GenerateMesh(maxh=maxh))
+    mesh.Curve(3)
+\end{lstlisting}
+Anschließend werden die Funktionenräume definiert:
+\begin{lstlisting}[style=python]
+order = k
+
+V = HDivDiv(mesh, order=order, dirichlet="dirichlet")
+Q = H1(mesh, order=order+1, dirichlet="dirichlet")
+X = V * Q
+\end{lstlisting}
+und unsere Parameter, in diesem Fall für Glas, deklariert, wobei wir für unsere Volumenkräfte, in der Arbeit immer bezeichnet mit $f$, die Gravitation $q$ verwenden.
+\begin{lstlisting}[style=python]
+E  = 70e9      #Glas ~ 70 GPa Elastizitätsmodul
+nu = 0.23
+t  = 0.02     #Dicke [m]
+rho = 2500   #kg/m^3 Dichte
+g = 9.81
+q = rho * t * g     #Eigengewicht der Platte 
+D = E*t**3/(12*(1-nu**2))
+
+def D_func(A):
+    return D *((1-nu)*A+ nu*Trace(A)*Id(2))
+
+def Dinv_func(A):
+    return 1/D * (1/(1-nu)*A - nu/(1-nu**2)*Trace(A)*Id(2))
+\end{lstlisting}
+Anschließend implementieren wir die gemischte Variationsformulierung und lösen das durch die FEM erhaltene lineare Gleichungssystem (siehe Zeile 15).
+\begin{lstlisting}[style=python]
+(sigma,w),(tau,v)= X.TnT()
+
+a = BilinearForm(X,symmetric=True)
+a += InnerProduct(Dinv_func(sigma),tau) * dx
+a += div(sigma)*Grad(v) * dx
+a += div(tau) * Grad(w) * dx
+a +=(-sigma[n,:] * tang(Grad(v)) - tau[n,:] * tang(Grad(w))  ) * dx(element_boundary=True)
+a.Assemble()
+
+L = LinearForm(X)
+L += q * v *dx
+L.Assemble()
+
+gf_solution = GridFunction(X)
+gf_solution.vec.data = a.mat.Inverse(X.FreeDofs(),inverse="") * L.vec
+
+gf_sigma, gf_w = gf_solution.components
+\end{lstlisting}
+Hier sind $(\boldsymbol{\sigma},w)$ unsere gesuchten Lösungsfunktionen und $(\boldsymbol{\tau},v)$ unsere Testfunktionen. \lstinline|gf_w| ist die approximierte Lösung der Verbiegung $w$ und \lstinline|gf_sigma| die approximierte Lösung des Momenttensors $\boldsymbol{\sigma}$.
+
+Die Abbildungen 4.4 und 4.5 zeigen die Visualisierung der Druchbiegung und des dazugehörigen Momententensors einer Glasplatte mit 1000 x 500 mm Fläche, einer Dicke von 5 mm, einer max. charakteristischen Länge der Dreiecke von 10 mm und $k=3$, als Grad unserer in Kapitel \ref{Kap: HHJ-Methode erklärt} definierten Basisfunktionen.
+\begin{figure}[h]
+    \begin{minipage}{0.5\textwidth}
+         \centering
+        \includegraphics[width=0.9\linewidth]{u_1000x500_t5_h10_s40_o3.png}
+        \caption{Durchbiegung}
+        \label{fig:placeholder}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{sigma_1000x500_t5_h10_s40_o3.png}
+        \caption{Momententensor}
+        \label{fig:placeholder}
+    \end{minipage}
+\end{figure}
+
+
+\newpage
+\section{Numerische Experimente}
+In diesem Kapitel soll die in Kapitel 3 hergeleitete HHJ-Methode anhand numerischer Experimente untersucht werden. Dabei interessieren uns insbesondere der Einfluss der Gitterweite $h$, sowie des Polynomgrades $k$, auf die Genauigkeit unserer Approximation.
+Alle in diesem Abschnitt erwähnten, längenbezogenen Werte sind in Millimeter angegeben.
+
+Da für dieses Beispiel keine analytische Lösung bekannt ist, wird als Referenzlösung die numerische Lösung auf einem sehr fein aufgelösten Netz verwendet. Die Feinheit des Netzes haben wir mit $h=1$ gewählt.
+
+Zuerst wählen wir für unsere Funktionenräume $k=0$. Das heißt, die Basisfunktionen für unsere Durchbiegung auf unseren Dreiecken bestehen aus Polynomen ersten Grades und die vier Einträge der Basisfunktionen für unseren Momententensor aus konstanten Werten.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|c c|c c}
+$h$ & $\|u_{ref}-u_h\|_{\Lzwei}$ & max. Fehler &
+$\|\boldsymbol{\sigma}_{ref}-\boldsymbol{\sigma}_h\|_{\lfett^2(\Omega)}$ & max. Fehler \\
+\hline
+5   & $2.3646\cdot10^{-5}$ & $4.7580\cdot10^{-7}$ & $816.5050$   & $229.1400$ \\
+10  & $9.4993\cdot10^{-5}$ & $2.4780\cdot10^{-6}$ & $1616.6914$  & $695.3303$ \\
+50  & $2.8990\cdot10^{-3}$ & $5.5333\cdot10^{-5}$ & $8494.0280$  & $13328.7057$ \\
+100 & $1.1711\cdot10^{-2}$ & $1.6113\cdot10^{-4}$ & $11638.3170$ & $17502.6486$ \\
+200 & $1.1711\cdot10^{-2}$ & $1.6113\cdot10^{-4}$ & $11638.3170$ & $17502.6486$ \\
+\end{tabular}
+\end{table}
+Hier kann man bereits eine deutliche Verbesserung bei kleiner werdendem $h$ erkennen, wobei der Fehler des Momententensors vergleichsweise groß bleibt.
+
+Nun wählen wir für unsere Funktionenräume $k=2$. Das bedeutet, dass die Basisfunktionen für unsere Durchbiegung auf unseren Dreiecken aus Polynomen dritten Grades bestehen und die vier Einträge der Basisfunktionen für unseren Momententensor aus Polynomen zweiten Grades.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|c c|c c}
+$h$ & $\|u_{ref}-u_h\|_{\Lzwei}$ & max. Fehler & $\|\boldsymbol{\sigma}_{ref}-\boldsymbol{\sigma}_h\|_{\lfett^2(\Omega)}$ & max. Fehler \\
+\hline
+5   & $5.0867\cdot10^{-9}$ & $1.0000\cdot10^{-10}$ & $8.4522\cdot10^{-1}$ & $1.0054\cdot10^{-2}$ \\
+10  & $5.7667\cdot10^{-8}$ & $5.6000\cdot10^{-9}$  & $4.3032$       & $1.7091\cdot10^{-1}$ \\
+50  & $5.8839\cdot10^{-5}$ & $1.3112\cdot10^{-6}$  & $357.0260$     & $200.0349$ \\
+100 & $6.3816\cdot10^{-4}$ & $1.3302\cdot10^{-5}$  & $1719.3667$    & $6043.4148$ \\
+200 & $5.9148\cdot10^{-4}$ & $1.2619\cdot10^{-5}$  & $1626.5437$    & $5970.5905$ \\
+\end{tabular}
+\end{table}
+Hier kann man bereits eine wesentliche Verbesserung durch die Erhöhung des Polynomgrades erkennen.
+
+Zum Schluss wählen wir noch $k=4$. Folglich erhalten wir für die Basisfunktionen der Durchbiegung Polynome fünften Grades und die vier Einträge der Basisfunktionen für den Momententensor bestehen aus Polynomen vierten Grades.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{c|c c|c c}
+$h$ & $\|u_{ref}-u_h\|_{\Lzwei}$ & max. Fehler &
+$\|\boldsymbol{\sigma}_{ref}-\boldsymbol{\sigma}_h\|_{\lfett^2(\Omega)}$ & max. Fehler \\
+\hline
+5   & $0$                      & $0$                      & $6.8370\cdot10^{-2}$ & $8.1108\cdot10^{-5}$ \\
+10  & $5.0000\cdot10^{-10}$    & $1.0000\cdot10^{-10}$    & $3.0309\cdot10^{-1}$ & $1.3670\cdot10^{-3}$ \\
+50  & $6.0459\cdot10^{-7}$     & $1.7000\cdot10^{-8}$     & $17.7566$            & $8.7338\cdot10^{-1}$ \\
+100 & $1.6516\cdot10^{-5}$     & $4.3630\cdot10^{-7}$     & $93.6906$            & $14.6612$ \\
+200 & $1.4634\cdot10^{-5}$     & $3.9490\cdot10^{-7}$     & $87.6881$            & $34.7003$ \\
+\end{tabular}
+\end{table}
+Mit Polynomgrad vier erhält man, bei verhältnismäßig groben Netzen, bereits eine sehr hohe Genauigkeit.\\
+
+Um das ganze noch besser nachzuvollziehen, wollen wir uns das auch noch graphisch ansehen.
+
+\begin{figure}[htbp]
+    \centering
+
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{L2_u.png}
+        %\subcaption{$L^2$-Fehler der Durchbiegung}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{L2_sigma.png}
+        %\subcaption{$L^2$-Fehler des Momententensors}
+    \end{minipage}
+
+    \vspace{0.5cm}
+
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{max_u.png}
+        %\subcaption{Maximaler Fehler der Durchbiegung}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{max_sigma.png}
+        %\subcaption{Maximaler Fehler des Momententensors}
+    \end{minipage} 
+
+    %\caption{Konvergenz der HHJ-Methode für verschiedene Polynomgrade und Gitterweiten.}
+    \label{fig:konvergenzplots}
+\end{figure}
+
+
+Unsere numerischen Ergebnisse bestätigen somit unser erwartetes Konvergenzverhalten und wir können sehen, dass sich die numerische Lösung mit zunehmender Feinheit des Gitters an die Referenzlösung annähert. Zudem zeigt sich auch, dass die Erhöhung des Polynomgrades genauere Ergebnisse liefert. Das bringt jedoch auch einen erhöhten Rechenaufwand mit sich, welcher durch eine höhere Anzahl an Freiheitsgraden hervorgerufen wird.
+
+\chapter{Fazit}
+Ziel der Arbeit war es, den Einfluss der Gravitation auf eine Glasplatte über die Durchbiegung zu berechnen.
+Dafür wurde mit den drei Annahmen nach Kirchhoff eine Plattengleichung beziehungsweise ein System an Gleichungen aufgestellt und die Variationsformulierung hergeleitet. Da in diesem Problem nach Lösungen mit erhöhter Regularität gesucht wurde, wurde dieses mittels Subsitution umgeformt, anschließend nach der HHJ-Methode diskretisiert und eine gemischte Variationsformulierung errechnet.
+Dieses wurde zur Demonstration mittels FEM numerisch gelöst. Um die Konvergenz der numerischen Lösung nachzuvollziehen, wurde die Feinheit des Netzes und der Polynomgrad der Testfunktionen beziehungsweise der Funktionenräume variiert. Das Experiment entsprach sehr gut den erwarteten Ergebnissen.
+
+In der Arbeit wurde für die HHJ-Formulierung vorausgesetzt, dass die Glasplatte am Rand eingespannt ist, bezeichnet mit 'clamped', was für die HHJ-Methode im Allgemeinen nicht notwendig ist. Die Berechnung der HHJ-Formulierung ist für andere Randbedingungen allerdings wesentlich komplizierter und wurde aus diesem Grund in dieser Arbeit vernachlässigt.
+
+
+
+\appendix
+\chapter{Verwendete Sätze}
+\section{Hilfsaussagen}\label{Hilfsaussagen Appendix}
+
+\begin{lemma}[Einbettungssatz von Sobolev\footnote{\cite{PDE-Skript}}]\label{Einbettungssatz von Sobolev} Sei $\Omega \subset \mathbb{R}^n$ eine offene beschränkte Menge mit $\partial\Omega \in C^1$ und sei $k-\frac{n}{2} > m$ für $k \in \mathbb{N}$ und $m \in \mathbb{N}_0$, dann folgt
+\[ H^k(\Omega) \hookrightarrow C^m(\overline{\Omega}),\]
+das bedeutet, es exisitiert ein $C>0$, so dass
+\[\|v\|_{C^m(\overline{\Omega})} \leq C \|v\|_{\Hzwei} \quad \forall v \in H^k(\Omega)\]
+\end{lemma}
+\singlespacing
+\begin{lemma}[Frobenius-Skalarprodukt]\label{Frobenius-Skalarprodukt}
+    Das Frobenius-Skalarprodukt ist definiert als $A:B = \sum_{i,j=1}^{n}a_{ij}b_{ij}$.\\
+    Für $\afett,\mathbf{B} \in \mathbb{R}^{n\times n}$ mit $\afett$ symmetrisch $(\afett = \afett^T)$ und $\mathbf{B}$ schiefsymmetrisch $(\bfett = -\bfett^T)$ ist das Frobenius-Skalarprodukt gleich Null.\\
+    Außerdem gilt die Ungleichung $|A:B| \leq \|A\| \|B\|$
+\end{lemma}\\
+\singlespacing
+\begin{lemma}[Lax-Milgram]\label{Lax-Milgram} Sei $H$ ein Hilbertraum und $(.,.)$ das dazugehörige Skalarprodukt. Sei außerdem $a:H\times H \rightarrow\mathbb{R}$ eine stetige und koerzive Bilinearform und $F \in H'$, dann existiert genau ein $u \in H$, sodass
+\[a(u,v) = F(v) \quad \forall v \in H.\]
+Für diese $u$ gilt zusätzlich
+\[\|u\|_H \leq c_L \|F\|_{H'}
+\]
+\end{lemma}
+\singlespacing
+\begin{lemma}[Satz von Gauß]\label{Satz von Gauß}
+    Sei $\Omega\subset \mathbb{R}^n$ eine offene und beschränkte Menge mit $\partial\Omega \in C^1$. Sei $v$ der äußere Normalvektor auf $\partial\Omega$ und $F \in C^1(\Omega,\mathbb{R}^n)\cap C^0(\overline{\Omega},\mathbb{R}^n)$, sodass $\divergenz F$ auf $\Omega$ integrierbar ist.
+    Dann gilt
+    \[\int_\Omega \divergenz F \, dx = \int_\Omega F\cdot v \, ds\]
+    beziehungsweise für zusätzlich $u \in C^1(\overline{\Omega})$
+    \[\int_\Omega u \divergenz F \, dx = -\int_\Omega \nabla u \cdot F \, dx + \int_{\partial\Omega} u(F\cdot v) \, ds\]
+\end{lemma}
+
+\section{Ungleichungen}
+\begin{lemma}[Schwarzsche Ungleichung\footnote{\cite{fanaSkript}}]\label{Schwarzsche Ungleichung}
+    Sei $H$ ein Vektorraum und $(.,.)$ ein inneres Produkt auf $H$ , dann gilt für $x,y \in H$
+    \[|(x,y)| \leq \|x\| \|y\|.\]
+    Bei Gleichheit folgt außerdem die lineare Abhängigkeit von $x$ und $y$.
+\end{lemma}
+\singlespacing
+\begin{comment}
+\begin{lemma}[Korn Ungleichung\footnote{\cite{kornUngleichung}}]\label{Korn Ungleichung}
+    Für $U \in H_{\Gamma_D}^1(\Omega)^d$:
+    \[\|U\|_{H^1(\Omega)} \leq C_K \|E(U)\|_{L^2(\Omega)}\]
+    mit $E(U)=\frac{1}{2}(\nabla U + \nabla U^T)$, wobei $H_{\Gamma_D}^1(\Omega) = \{v \in H^1(\Omega): v=0 \text{ auf } \Gamma_D\}$ und $\Gamma_D\subset \Gamma$ positives Maß haben muss.
+\end{lemma}\\
+\singlespacing
+\end{comment}
+\begin{lemma}[Friedrichs Ungleichung\footnote{\cite{NumPDE}    }]\label{Friedrichs Ungleichung}
+    Sei $\Omega \subset \mathbb{R}^d$ ein beschränktes Lipschitz-Gebiet und $\Gamma_D\subset \Gamma = \partial\Omega$ mit positivem Maß. Dann existiert eine von $\Omega$ und $\Gamma_D$ abhängige Konstante $c_F>0$, sodass:
+    \[\|v\|_{L^2(\Omega)} \leq c_F\|\nabla v\|_{L^2(\Omega)} \quad \forall v \in H^1_{\Gamma_D}(\Omega)\]
+    wobei $H^1_{\Gamma_D}(\Omega) := \{v \in H^1(\Omega): v=0 \text{ auf } \Gamma_D\}$
+\end{lemma}
+
+\section{Skizze des Plattenmodells}\label{Skizze des Plattenmodells}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{PlattenmodellSkizze.jpg}
+    \label{fig:placeholder}
+\end{figure}
+\chapter{Mehr zur Finiten-Elementen Methode}
+\section{Illustration der FEM an einem einfachen Beispiel}\label{App: Rechenbeispiel FEM}
+Um ein besseres intuitives Verständnis für die Finite-Elemente-Methode zu erhalten, wollen wir im folgenden Abschnitt, für die unten angegebenen PDE, händisch, mittels FEM, eine Näherungslösung berechnen.\\
+\\
+Für $\Omega = (0,1) \subset \mathbb{R}$ und $f=-1$ sei unser Problem:
+\begin{equation}
+    \begin{aligned}
+            \Delta u &= f \quad &\text{ auf } \Omega\\
+    u &= 0 \quad  &\text{ auf } \partial\Omega  
+    \end{aligned}
+\end{equation}
+\\
+\\
+Die schwache Formulierung dazu, ist
+\[
+    A(u,v) := -\int_0^1 \nabla u \nabla v \, dx = \int_0^1 fv\, dx =: f(v)
+\]
+\\
+Für die Diskretisierung unterteilen wir unser Gebiet in Teilgebiete mit $n=5$ Grenzpunkten 
+$x_i = \frac{i}{n} \text{ für } i = 0,...n$, also 
+\[\mathbf{x} = \Big(0,\frac{1}{4},\frac{1}{2},\frac{3}{4},1\Big).\]
+Wir arbeiten also mit äquidistanten Stützstellen und einer Schrittweite $h=\frac{1}{4}$.\\
+
+Nun konstruieren wir darauf, die folgenden lineare Basisfunktionen:
+\\
+\[
+\phi_1(x)=\left\{
+\begin{array}{ll} 
+    \frac{x_2-x}{h}, & x\in [x_1,x_2] \\
+    0,               & x\geq x_2
+\end{array}\right.
+\]
+für $i = 2,3,4:$
+\[
+\phi_i(x)=\left\{
+\begin{array}{ll} 
+    \frac{x-x_{j-1}}{h}, & x\in [x_{j-1},x_j] \\
+    \frac{x_{j+1}-x}{h}, & x\in [x_j,x_{j+1}] \\
+    0,                   & x \notin [x_{j-1},x_{j+1}]
+\end{array}\right.
+\] 
+\[
+\phi_5(x)=\left\{
+\begin{array}{ll} 
+    \frac{x-x_{j-1}}{h}, & x\in [x_4,x_5] \\
+    0,                   & x\leq x_4
+\end{array}\right.
+\]
+\\
+Der Funktionenraum, in dem wir unsere Lösung $u_h$ suchen, sei 
+\[V_h = span[x_1,...,x_5] \text{ mit } u_h(x) = \sum_{i=1}^{5} \phi_i(x)u_i\] 
+wobei $u_i \in \mathbb{R}$ beziehungsweise $u = (u_1,u_2,...,u_5) \in \mathbb{R}^{5}$ .
+\\
+Aus den gegebenen Randbedingungen $u(0)=u(1)=0$ folgt $u_1 = 0 = u_5$, wodurch sich unser Funktionenraum, in dem wir unsere Lösung suchen, zu: 
+\[V_h = span[x_1,x_2,x_3] \text{ mit } u_h(x) = \sum_{i=2}^{4} \phi_i(x)u_i
+\] 
+reduziert.
+\\
+Wie wir in Abschnitt \textit{\ref{subsec: Vorgehensweise in der FEM}} erwähnt haben, erhalten wir mithilfe der Linearität beziehungsweise Bilinearität  von $A$ und $f$ und der Tatsache, dass wir nur noch unsere Basisfunktionen als Testfunktionen betrachten müssen, folgendes Problem:
+\[  
+    \text{suchen } u \in \mathbb{R}^3: \hspace{0.5cm} \sum_{i=2}^4A(b_i,b_j)u_i = f(b_j) \hspace{1cm} \forall j=2,3,4
+\]
+Dieses Problem können wir lösen, in dem wir $A(b_i,b_j)$ und $f(b_j)$ für $i,j=2,3,4$ berechnen.\\
+\begin{remark}
+    Zur Berechnung von $A(b_i,b_j)$ benötigen wir die ersten Ableitungen unserer Basisfunktionen:
+\[
+\phi_i'(x)=
+\begin{cases}
+\dfrac{1}{h},  & x\in[x_{i-1},x_i],\\
+-\dfrac{1}{h}, & x\in[x_i,x_{i+1}],\\
+0,             & \text{sonst},
+\end{cases}
+\quad i=2,3,4,
+\]
+\[
+\phi_1'(x)=
+\begin{cases}
+-\dfrac{1}{h}, & x\in[x_1,x_2],\\
+0,             & \text{sonst},
+\end{cases}
+\qquad
+\phi_5'(x)=
+\begin{cases}
+\dfrac{1}{h}, & x\in[x_4,x_5],\\
+0,            & \text{sonst}.
+\end{cases}
+\]
+\end{remark}
+
+und können uns nun damit $A(b_i,b_j)$ berechnen.\\
+Hier zwei beispielhafte Rechnungen:
+\[
+A_{22} = -\int_0^1\phi_2' \phi_2' \, dx = -\left(\int_0^\frac{1}{4}\frac{1}{h^2} \, dx + \int_\frac{1}{4}^\frac{1}{2}(-\frac{1}{h})^2\right)= -\frac{1}{2h^2} = -8
+\]
+\[
+A_{23} = -\int_0^1\phi_2'\phi_3' \, dx = -\int_0^\frac{1}{4}\frac{1}{h}\cdot 0 \, dx - \int_\frac{1}{4}^\frac{1}{2}(-\frac{1}{h})\cdot \frac{1}{h} \, dx - \int_\frac{1}{2}^\frac{3}{4} 0\cdot(-\frac{1}{h})\, dx - \int_\frac{3}{4}^10\, dx = \frac{1}{4h^2} = 4
+\]
+Berechnet man alle neun Einträge, erhalten wir die Matrix $\afett$:
+\[
+\afett = 
+\begin{pmatrix}
+    A_{22} & A_{23} & A_{24} \\
+    A_{32} & A_{33} & A_{34} \\
+    A_{42} & A_{43} & A_{44} \\
+\end{pmatrix}
+= 
+-\frac{1}{h^2}
+\begin{pmatrix}
+1/2 & -\frac{1}{4} & 0\\
+-\frac{1}{4} & 1/2 & -\frac{1}{4}\\
+0 & -\frac{1}{4} & 1/2
+\end{pmatrix}
+=
+\begin{pmatrix}
+    -8 & 4 & 0 \\
+    4 & -8 & 4 \\
+    0 & 4 & -8 
+\end{pmatrix}
+\]
+Für die Berechnung von $\mathbf{f}$, können wir analog vorgehen:
+\[
+f_2 = \int_0^1f\cdot\phi_2\, dx = -\frac{1}{h}\left( \int_0^\frac{1}{4} x \,dx + \int_\frac{1}{4}^\frac{1}{2}(\frac{1}{2}-x) \right) = -\frac{1}{h}\left( \frac{(\frac{1}{4})^2}{2} + \frac{1}{8} - \frac{(\frac{1}{2})^2}{2} + \frac{(\frac{1}{4})^2}{2}\right) = -\frac{1}{16h} = -\frac{1}{4}
+\]
+und erhalten hierfür:
+\[
+\mathbf{f} = 
+\begin{pmatrix}
+    f_2 \\
+    f_3 \\
+    f_4
+\end{pmatrix}
+=
+\begin{pmatrix}
+    -\frac{1}{h} \\
+    -\frac{1}{h} \\
+    -\frac{1}{h}
+\end{pmatrix}
+=
+\begin{pmatrix}
+    -\frac{1}{4} \\
+    -\frac{1}{4} \\
+    -\frac{1}{4} 
+\end{pmatrix}
+\]
+Jetzt müssen wir noch das lineare Gleichungssystem
+\[
+\begin{pmatrix}
+    -8 & 4 & 0 \\
+    4 & -8 & 4 \\
+    0 & 4 & -8 
+\end{pmatrix}^T
+\cdot 
+\begin{pmatrix}
+    u_2 \\
+    u_3 \\
+    u_4
+\end{pmatrix}
+=
+\begin{pmatrix}
+    \frac{1}{4} \\
+    \frac{1}{4} \\
+    \frac{1}{4} 
+\end{pmatrix}
+\]
+lösen, wofür wir $\mathbf{u} = (0,\frac{3}{32},\frac{1}{8},\frac{3}{32},0)$ erhalten, womit unsere errechnete Lösung:
+\[
+u_h(x) = \frac{3}{32}\cdot\phi_2(x) + \frac{1}{8}\cdot\phi_3(x) + \frac{3}{32}\cdot\phi_4(x)
+\]
+ist.\\
+Vergleichen wir unsere errechnete Lösung mit der analytischen Lösung  $u(x)=\frac{1}{2}x(1-x)$, können wir leicht nachvollziehen, dass die Genauigkeit der Näherungslösung von der Feinheit der 'Finiten Elemente' abhängt
+Die errechnete Lösung, unsere Näherungslösung, können wir nun mit der analytischen Lösung $u(x)=\frac{1}{2}x(1-x)$ vergleichen:\footnote{Dieses Beispiel wurde bereits in meiner Seminararbeit \cite{NavierStokes_Seminararbeit} verwendet.}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{angenäherte_lsg_schmall.png}
+    \label{fig:placeholder}
+\end{figure}
+
+
+
+\newpage
+
+
+\printbibliography[heading=bibintoc, title={Referenzen}]
+
+\chapter*{Eidesstattliche Erklärung}
+
+Ich erkläre an Eides statt, dass ich die vorliegende Bachelorarbeit selbstständig und ohne unerlaubte fremde Hilfe verfasst habe. Alle verwendeten Quellen und Hilfsmittel wurden vollständig angegeben, und wörtlich oder sinngemäß übernommene Stellen sind als solche gekennzeichnet. 
+
+Zur sprachlichen Überarbeitung von Formulierungen und zur Verbesserung der Lesbarkeit wurde die künstliche Intelligenz ChatGPT 5.5 (OpenAI) verwendet. Die inhaltliche Verantwortung für die Arbeit liegt vollständig bei der Verfasserin.
+
+Die Arbeit wurde bisher weder im In- noch im Ausland in gleicher oder ähnlicher Form einer Prüfungsbehörde vorgelegt.
+
+\vspace{3cm}
+
+\noindent
+\begin{tabular}{p{0.45\textwidth}}
+    \hrule \\
+    Anna Sonnleitner \\
+\end{tabular}
+
+
+\end{document}
